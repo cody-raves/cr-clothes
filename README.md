@@ -130,7 +130,7 @@ Proven on live servers:
 - In-game designer: fill, text, freehand drawing and image layers on the real
   UV map, with a live 3D preview
 - Texture baking into valid GTA texture dictionaries, on the game server
-- Complete installable clothing packs
+- Complete installable clothing packs, as built up to version 1.0.0
 - Discord delivery by webhook, with the pack never leaving your server
 - Works on hosted servers with a read-only resource folder
 
@@ -140,8 +140,19 @@ Newer, and less battle-tested:
   previews read from the packs themselves
 - Design rights with jobs, gangs and store purchases
 
+New in 1.1.0 and not yet tested in the game:
+
+- Every design on clothing exporting as a new clothing item of its own,
+  beside the garment it was drawn on. This is now what an export builds for
+  everything but props. The packs have been checked offline only; none has
+  been loaded in the game yet. Try one on a test server before installing
+  packs on a live one.
+
 Known limits are listed at the end of the
-[admin guide](docs/ADMIN-GUIDE.md#known-limits).
+[admin guide](docs/ADMIN-GUIDE.md#known-limits). Read the first two before
+installing many designs: the new packs are untested in the game, and each
+installed pack uses one of a small number of clothing collection slots on the
+player model.
 
 ---
 
@@ -178,6 +189,8 @@ clothing you made, commissioned, or bought with the right to modify it.
 Built by [@cody-raves](https://github.com/cody-raves). The `.ydd` mesh reader
 was written from the file-format knowledge documented by the
 [CodeWalker](https://github.com/dexyfex/CodeWalker) project; no CodeWalker code
-is included or required.
+is included or required. The `.ymt` writer, which describes each exported item
+to the game, was written from the format as documented by CodeWalker and by
+RageLib (part of gta-toolkit); no code from either is included.
 
 Issues and pull requests are welcome — that is the point.

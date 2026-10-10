@@ -157,6 +157,16 @@ local function resolveGarmentCollection()
 
     local ped = PlayerPedId()
     local count = GetPedCollectionsCount(ped)
+    -- A prepared garment is on record under its folder name
+    -- (mp_f_freemode_01_mp_f_mypack) while the game lists the collection by
+    -- its dlc name (mp_f_mypack), so the comparison with
+    -- activeGarment.collection does not match it. The dlc name is the hint,
+    -- with or without the gender prefix. A name that merely contains the hint
+    -- counts only when neither is listed: a short hint ('cd', 'a1') is also
+    -- found inside the name of an installed export, mp_f_cd_<12 hex digits>.
+    local hint = activeGarment.collectionHint and tostring(activeGarment.collectionHint):lower() or nil
+    local genderPrefix = activeGarment.requiredPedModel == 'mp_m_freemode_01' and 'mp_m_' or 'mp_f_'
+    local namedCollection
     local hintedCollection
 
     for index = 0, count - 1 do
@@ -167,15 +177,17 @@ local function resolveGarmentCollection()
             return resolvedCollection
         end
 
-        if activeGarment.collectionHint
-            and name
-            and name:lower():find(activeGarment.collectionHint:lower(), 1, true)
-        then
-            hintedCollection = name
+        if hint and name then
+            local lowered = name:lower()
+            if lowered == hint or lowered == genderPrefix .. hint then
+                namedCollection = name
+            elseif lowered:find(hint, 1, true) then
+                hintedCollection = name
+            end
         end
     end
 
-    resolvedCollection = hintedCollection
+    resolvedCollection = namedCollection or hintedCollection
     return resolvedCollection
 end
 

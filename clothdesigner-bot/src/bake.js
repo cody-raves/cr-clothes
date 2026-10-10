@@ -35,6 +35,9 @@ function findPreviewObj(templatesDir, slot) {
       return { objPath: direct, uvTransform: 'none' };
     }
   }
+  // An owner's garment whose mesh could not be read has no mesh: the card
+  // shows the flat design. A lookup by file name would find another garment's.
+  if (slot.templateFiles) return null;
   try {
     const previewsRoot = path.join(templatesDir, 'generated', 'previews');
     const wantedXml = `${slot.modelFile}.xml`;

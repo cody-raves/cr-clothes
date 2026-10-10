@@ -129,6 +129,7 @@ React to designs being made (log them, add them to a job wardrobe):
 ```lua
 AddEventHandler('cr-clothes:designExported', function(data)
     -- data.player, data.slotId, data.packName, data.mode
+    -- data.collection: the new item's collection name (nil for a replacement pack)
 end)
 ```
 

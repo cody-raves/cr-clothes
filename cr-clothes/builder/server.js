@@ -11,12 +11,17 @@ const WebhookDelivery = require(path.join(resourceRoot, 'builder', 'webhook-deli
 const PngEncoder = require(path.join(resourceRoot, 'builder', 'png-encoder.js'));
 const PreviewRender = require(path.join(resourceRoot, 'builder', 'preview-render.js'));
 
-// Locate the shipped preview OBJ for a registry slot: the generated/previews
-// folder whose gender matches and which carries <modelFile>.xml next to its
-// model.obj (e.g. jbib_000_u.ydd -> female_tops_jbib_000_u/). Cached per slot.
+// Locate the preview OBJ for a registry slot. A garment prepared by
+// crclothes_prepare has its own mesh on record, or none. A built-in slot is
+// matched to the shipped generated/previews folder of its gender that carries
+// <modelFile>.xml next to its model.obj (jbib_000_u.ydd ->
+// female_tops_jbib_000_u/). Cached per slot id, not per model file name: two
+// garments can share a file name (every exported pack ships a
+// <part>_000_u.ydd), and one must not get the other's mesh on its Discord
+// card.
 const previewObjCache = new Map();
 function findPreviewObj(slot) {
-    const cacheKey = `${slot.gender}:${slot.modelFile}`;
+    const cacheKey = slot.id;
     if (previewObjCache.has(cacheKey)) return previewObjCache.get(cacheKey);
 
     let found = null;
@@ -29,6 +34,13 @@ function findPreviewObj(slot) {
             previewObjCache.set(cacheKey, found);
             return found;
         }
+    }
+    // An owner's garment whose mesh could not be read has no mesh: the card
+    // shows the flat design. Looking one up by file name would find another
+    // garment's (a shipped jbib_000_u, say) and show the design on that.
+    if (slot.templateFiles) {
+        previewObjCache.set(cacheKey, null);
+        return null;
     }
     try {
         const previewsRoot = path.join(resourceRoot, 'generated', 'previews');
@@ -124,6 +136,9 @@ function playerUploadKey(playerSource, uploadId) {
 
 // Export rights: admins (ACE) always; otherwise the grant system decides —
 // a Tebex purchase, an admin grant, or a job/gang rule (see grants.lua).
+// `template` is the slot id of the garment being exported, so that a right
+// granted for one garment counts for it; grants.lua itself also accepts a
+// right for any garment ('*'). Without a garment the question is about '*'.
 function hasBuilderAccess(playerSource, template) {
     if (playerSource === 0) return true;
     if (IsPlayerAceAllowed(String(playerSource), 'command.clothbuilder')) return true;
@@ -140,6 +155,36 @@ function sendResult(playerSource, result) {
 
 function exportResult(playerSource, result) {
     emitNet('cr-clothes:exportResult', playerSource, result);
+}
+
+// What a player is sent must not describe this machine. Error texts from the
+// exporter, the baker and Node itself can name a file by its absolute path,
+// so the two folders this server works in are replaced by what they are
+// before a text leaves it. The longer one goes first: the pack folder can lie
+// inside the resource.
+function withoutServerPaths(text) {
+    const outputDir = require(path.join(resourceRoot, 'builder', 'output-dir.js')).resolveOutputDir(resourceRoot);
+    const folders = [[resourceRoot, resourceName], [outputDir, 'the pack folder']]
+        .sort((a, b) => path.resolve(b[0]).length - path.resolve(a[0]).length);
+    let shown = String(text);
+    for (const [folder, name] of folders) {
+        // As the server was given it, as Node resolves it, and with the
+        // other kind of slash.
+        const resolved = path.resolve(folder);
+        for (const spelling of new Set([folder, resolved, resolved.split(path.sep).join('/')])) {
+            if (spelling) shown = shown.split(spelling).join(name);
+        }
+    }
+    return shown;
+}
+
+// A failed export: the player is told why, the server console gets the same
+// line, and the stack trace (this server's file layout, line by line) stays
+// in the console of a server that runs with clothdesigner_debug.
+function exportFailure(playerSource, error, fallbackMessage) {
+    const debug = GetConvar('clothdesigner_debug', 'false') === 'true';
+    console.warn(`[cr-clothes] export by player ${playerSource} failed: ${(debug && error?.stack) || error?.message || fallbackMessage}`);
+    exportResult(playerSource, { ok: false, message: withoutServerPaths(error?.message || fallbackMessage) });
 }
 
 function loadRegistry() {
@@ -294,27 +339,44 @@ RegisterCommand('crclothes_scan_all', playerSource => {
     console.log(`[cr-clothes] catalog scan requested from ${players.length} player(s).`);
 }, true);
 
+// The five net events below belong to dev tools (client-curate.lua,
+// client-equip-test.lua) that a release does not ship, while this file ships
+// whole. Any connected client can send a net event, so each of them is taken
+// only from a player who holds the ACE of the console commands that start
+// these tools; from anyone else it is dropped without a word.
+function isDevToolSender(playerSource) {
+    return IsPlayerAceAllowed(String(playerSource), 'command.clothbuilder');
+}
+
+// Where the dev tools write: a sub-folder. On a hosted server the system temp
+// folder's clothdesigner/ is the pack folder itself, and the download
+// endpoint hands out every flat file in it (sub-folders are never served).
+function devToolsDir() {
+    const dir = path.join(os.tmpdir(), 'clothdesigner', 'dev-tools');
+    fs.mkdirSync(dir, { recursive: true });
+    return dir;
+}
+
 // Curation tags (client-curate.lua): garments a human looked at in-game and
 // judged worth adding. Accumulated server-side and written out on dump, so a
-// curation session survives a client crash.
+// curation session survives a client crash. They live in memory until the
+// server stops, hence the limit.
+const CURATION_TAG_LIMIT = 5000;
 const curationTags = new Map();
-onNet('cr-clothes:tagGarment', record => {
+function keepCurationTag(record) {
     if (!record || typeof record !== 'object') return;
     const key = [record.gender, record.category, record.collection, record.drawableId].join('|');
-    curationTags.set(key, record);
+    if (curationTags.has(key) || curationTags.size < CURATION_TAG_LIMIT) curationTags.set(key, record);
+}
+onNet('cr-clothes:tagGarment', record => {
+    if (!isDevToolSender(global.source)) return;
+    keepCurationTag(record);
 });
 onNet('cr-clothes:dumpTags', list => {
+    if (!isDevToolSender(global.source)) return;
     try {
-        if (Array.isArray(list)) {
-            for (const record of list) {
-                if (!record) continue;
-                const key = [record.gender, record.category, record.collection, record.drawableId].join('|');
-                curationTags.set(key, record);
-            }
-        }
-        const outDir = path.join(os.tmpdir(), 'clothdesigner');
-        fs.mkdirSync(outDir, { recursive: true });
-        const file = path.join(outDir, 'curated-garments.json');
+        if (Array.isArray(list)) list.forEach(keepCurationTag);
+        const file = path.join(devToolsDir(), 'curated-garments.json');
         const records = [...curationTags.values()];
         fs.writeFileSync(file, JSON.stringify({ generatedAt: new Date().toISOString(), count: records.length, garments: records }, null, 2));
         console.log(`[cr-clothes] curation: ${records.length} tagged garment(s) -> ${file}`);
@@ -335,11 +397,10 @@ RegisterCommand('crclothes_curate_all', playerSource => {
 }, true);
 
 onNet('cr-clothes:scanResult', report => {
+    if (!isDevToolSender(global.source)) return;
     try {
-        const outDir = path.join(os.tmpdir(), 'clothdesigner');
-        fs.mkdirSync(outDir, { recursive: true });
-        const model = String(report?.model || 'unknown').replace(/[^a-z0-9_]/gi, '');
-        const file = path.join(outDir, `catalog-universe-${model}.json`);
+        const model = String(report?.model || 'unknown').replace(/[^a-z0-9_]/gi, '').slice(0, 40);
+        const file = path.join(devToolsDir(), `catalog-universe-${model}.json`);
         fs.writeFileSync(file, JSON.stringify(report, null, 2));
         console.log(`[cr-clothes] catalog scan: ${report?.totalDrawables || 0} drawables, ` +
             `${(report?.collections || []).length} collections -> ${file}`);
@@ -349,6 +410,7 @@ onNet('cr-clothes:scanResult', report => {
 });
 
 onNet('cr-clothes:diagNote', note => {
+    if (!isDevToolSender(global.source)) return;
     console.log(`[clothdesigner-diag] NOTE from player ${global.source}: ${String(note).slice(0, 300)}`);
 });
 
@@ -356,6 +418,7 @@ onNet('cr-clothes:diagNote', note => {
 // here so local/headless testing can read the verdict from the server console.
 onNet('cr-clothes:diagReport', report => {
     const player = global.source;
+    if (!isDevToolSender(player)) return;
     const matches = Array.isArray(report?.cdMatches) ? report.cdMatches : [];
     const tail = Array.isArray(report?.lastFew) ? report.lastFew : [];
     console.log('[clothdesigner-diag] ======================================');
@@ -441,8 +504,14 @@ setInterval(() => {
     }
 }, 60 * 1000);
 
+// The garment an upload is for. Export rights are asked about this id, and
+// the bake and the consumed design use are keyed by the same one.
+function uploadSlotId(meta) {
+    return String(meta?.slotId || meta?.garment?.id || '').trim();
+}
+
 function validateUploadMeta(meta) {
-    const slotId = String(meta?.slotId || meta?.garment?.id || '').trim();
+    const slotId = uploadSlotId(meta);
     if (!slotId) throw new Error('Export is missing a generated slot id.');
 
     const textureIndex = Math.floor(Number(meta?.textureIndex) || 0);
@@ -461,7 +530,7 @@ function validateUploadMeta(meta) {
 
 onNet('cr-clothes:exportBegin', request => {
     const playerSource = global.source;
-    if (!hasBuilderAccess(playerSource)) {
+    if (!hasBuilderAccess(playerSource, uploadSlotId(request?.meta))) {
         exportResult(playerSource, { ok: false, message: 'Export permission denied.' });
         return;
     }
@@ -499,12 +568,11 @@ onNet('cr-clothes:exportBegin', request => {
 
 onNet('cr-clothes:exportChunk', request => {
     const playerSource = global.source;
-    if (!hasBuilderAccess(playerSource)) return;
-
     const uploadId = String(request?.uploadId || '').slice(0, 80);
     const key = playerUploadKey(playerSource, uploadId);
     const upload = exportUploads.get(key);
     if (!upload) return;
+    if (!hasBuilderAccess(playerSource, uploadSlotId(upload.meta))) return;
 
     const index = Math.floor(Number(request?.index));
     const chunk = String(request?.chunk || '');
@@ -565,18 +633,20 @@ function bakeExportUpload(playerSource, uploadId, upload, cleanupKey = null) {
             throw new Error(`Raw texture was ${rawBytes.length} bytes; expected ${expectedLength} for ${width}x${height}.`);
         }
 
-        // Debug copy of the raw design; only written with clothdesigner_debug on.
-        let sidecarDir = null;
+        // Debug copy of the raw design; only written with clothdesigner_debug
+        // on. Where it went is the owner's to know, so it is printed here and
+        // not sent to the player.
         if (GetConvar('clothdesigner_debug', 'false') === 'true') try {
-            sidecarDir = writeExportSidecar(upload.meta, rawBytes, uploadId);
+            console.log(`[cr-clothes] export sidecar written to ${writeExportSidecar(upload.meta, rawBytes, uploadId)}`);
         } catch (error) {
             console.warn(`[cr-clothes] export sidecar skipped: ${error?.message || error}`);
         }
 
         const exportName = String(upload.meta?.exportName || upload.meta?.garment?.label || 'Baked design');
-        // Product output is an ADDON pack: a real new clothing item (YMT +
-        // YDD + texture variants), written OUTSIDE the read-only resource
-        // tree and downloadable via clothbake_get / the /out endpoint.
+        // Product output is an ADDON pack: a real new clothing item in a
+        // collection of its own (generated YMT + the garment's model + the
+        // design), written OUTSIDE the read-only resource tree and
+        // downloadable via clothbake_get / the /out endpoint.
         // Runtime AddReplaceTexture previews are unrelated to this file; the
         // caret replace pack remains available as a dev/test mode via convar.
         const exportMode = GetConvar('clothdesigner_export_mode', 'addon') === 'replace' ? 'replace' : 'addon';
@@ -596,56 +666,100 @@ function bakeExportUpload(playerSource, uploadId, upload, cleanupKey = null) {
             resourcePack = ResourcePackExporter.createReplacePack(packOptions);
         } else {
             try {
-                resourcePack = ResourcePackExporter.createAddonPack(packOptions);
+                resourcePack = ResourcePackExporter.createAddonPack({
+                    ...packOptions,
+                    // Owner switches. They are read at every export, so a
+                    // `set` typed in the console applies to the next one, and
+                    // any value but the one named here means the default.
+                    textures: GetConvar('clothdesigner_export_textures', 'design') === 'all' ? 'all' : 'design',
+                    props: GetConvar('clothdesigner_prop_addon', 'false') === 'true',
+                    ymtLayout: GetConvar('clothdesigner_ymt_layout', 'codewalker') === 'ragelib' ? 'ragelib' : 'codewalker'
+                });
             } catch (error) {
-                // A dropped pack without its collection .ymt cannot become a new
-                // addon item, but its texture can still be replaced. Say so
-                // rather than failing the export or switching modes silently.
-                if (!error || error.code !== 'NO_TEMPLATE_YMT') throw error;
+                // The exporter refuses what it cannot make a new item of: a
+                // prop while the owner has not switched props on, or a
+                // garment whose file names say something a generated .ymt
+                // has no value for (a race suffix the game's files do not
+                // have, a prop prefix left in a registry by 1.0.0). The
+                // texture of the existing garment can still be replaced, as
+                // 1.0.0 did for packs without a .ymt. Say so rather than
+                // failing the export or switching modes silently.
+                if (!error || error.code !== 'ADDON_UNSUPPORTED') throw error;
                 resourcePack = ResourcePackExporter.createReplacePack(packOptions);
-                exportModeNote = ' NOTE: this garment was prepared from a pack without a .ymt, so the export REPLACES the texture of the existing garment instead of creating a new item.';
+                exportModeNote = error.reason === 'props-off'
+                    ? "NOTE: props are exported as a texture replacement on this server (clothdesigner_prop_addon is not 'true'), so this pack REPLACES the texture of the existing prop instead of creating a new item."
+                    : `NOTE: this garment cannot be exported as a new item (${String(error.message).replace(/\.$/, '')}), so this pack REPLACES the texture of the existing garment instead of creating a new item.`;
             }
         }
 
         let inPlaceBake = null;
         let inPlaceBakeSkipped = null;
-        const capability = refreshBakerCapability(false);
         // In-place baking overwrites the slot's source .ytd. For an
         // owner-prepared garment that file is the owner's own clothing in
-        // garments/, which must never be modified.
+        // garments/, which must never be modified. Whether in-place baking
+        // is possible is not even asked for those: the answer is found by
+        // writing probe files.
         const exportSlot = loadRegistry().slots.find(item => item && item.id === slotId) || {};
         if (exportSlot.templateFiles) {
             inPlaceBakeSkipped = 'Skipped: owner-prepared garments are never baked over in place.';
-        } else if (capability.ok) {
-            try {
-                inPlaceBake = HostedYtdBaker.bake({
-                    resourceRoot,
-                    registryPath,
-                    slotId,
-                    textureIndex,
-                    width,
-                    height,
-                    rawRgba: rawBytes,
-                    exportName,
-                    saveFile: bakerSaveFile,
-                    deleteFile: bakerDeleteFile
-                });
-            } catch (error) {
-                inPlaceBakeSkipped = `Active stream YTD bake failed after resource asset creation: ${error?.message || error}`;
-            }
         } else {
-            inPlaceBakeSkipped = capability.message || 'In-place hosted bake is unavailable on this server.';
+            const capability = refreshBakerCapability(false);
+            if (capability.ok) {
+                try {
+                    inPlaceBake = HostedYtdBaker.bake({
+                        resourceRoot,
+                        registryPath,
+                        slotId,
+                        textureIndex,
+                        width,
+                        height,
+                        rawRgba: rawBytes,
+                        exportName,
+                        saveFile: bakerSaveFile,
+                        deleteFile: bakerDeleteFile
+                    });
+                } catch (error) {
+                    inPlaceBakeSkipped = `Active stream YTD bake failed after resource asset creation: ${error?.message || error}`;
+                }
+            } else {
+                inPlaceBakeSkipped = capability.message || 'In-place hosted bake is unavailable on this server.';
+            }
         }
 
         if (cleanupKey) cleanupExportUpload(cleanupKey);
+        const packSize = `${Math.round((resourcePack.zipBytes || 0) / 1024)} KB`;
+        const installSteps = `extract into resources/, add 'ensure ${resourcePack.packName}', then restart.`;
+        // With webhook delivery the zip is about to be renamed to carry its
+        // download id and the folder listing is off: the name it has now is
+        // not one anybody can fetch, so the message does not give it.
+        let messageParts;
+        if (!webhookDelivery.enabled()) {
+            messageParts = [`Created pack '${resourcePack.packName}.zip' (${packSize}).`, `Download it via clothbake_get or the /out endpoint, ${installSteps}`];
+        } else if (webhookDelivery.settings().publicUrl) {
+            messageParts = [`Created pack '${resourcePack.packName}' (${packSize}).`, `Its download link is sent to Discord (clothbake_get in the server console prints it too); ${installSteps}`];
+        } else {
+            messageParts = [`Created pack '${resourcePack.packName}' (${packSize}).`, `Run clothbake_get in the server console for its download link, ${installSteps}`];
+        }
+        // An addon pack is a clothing collection of its own, and the player
+        // model only has room for a few. This message reaches the player who
+        // exported; the Discord card says the same to whoever installs the
+        // pack (see the delivery below).
+        if (resourcePack.mode === 'addon') {
+            messageParts.push(`It adds the clothing collection '${resourcePack.dlcName}'. Each installed pack uses one clothing collection slot, and a server only has a few.`);
+        }
+        if (inPlaceBake) messageParts.push('Also baked into the active stream YTD.');
+        if (exportModeNote) messageParts.push(exportModeNote);
+        // The player's copy of the result names no folder of this server:
+        // not where the zip lies, and no text that carries a path.
+        const packForPlayer = { ...resourcePack };
+        delete packForPlayer.zipPath;
         exportResult(playerSource, {
             ok: true,
-            message: `Created pack '${resourcePack.packName}.zip' (${Math.round((resourcePack.zipBytes || 0) / 1024)} KB). Download it via clothbake_get or the /out endpoint, extract into resources/, add 'ensure ${resourcePack.packName}', then restart. ${inPlaceBake ? 'Also baked into the active stream YTD.' : ''}${exportModeNote}`,
+            message: withoutServerPaths(messageParts.join(' ')),
             restartRequired: true,
-            resourcePack,
+            resourcePack: packForPlayer,
             inPlaceBake,
-            inPlaceBakeSkipped,
-            sidecarPath: sidecarDir
+            inPlaceBakeSkipped: inPlaceBakeSkipped === null ? null : withoutServerPaths(inPlaceBakeSkipped)
         });
 
         // A successful export spends one design use (unlimited grants and
@@ -660,7 +774,10 @@ function bakeExportUpload(playerSource, uploadId, upload, cleanupKey = null) {
                 slotId,
                 textureIndex,
                 packName: resourcePack.packName || null,
-                mode: resourcePack.mode || 'addon'
+                mode: resourcePack.mode || 'addon',
+                // The new item's collection name (addon packs only), so a
+                // wardrobe or shop script can offer it without opening the pack.
+                collection: resourcePack.dlcName || null
             });
         } catch { /* event bus unavailable */ }
 
@@ -745,6 +862,10 @@ function bakeExportUpload(playerSource, uploadId, upload, cleanupKey = null) {
                         name: exportName,
                         mode: String(resourcePack.mode || 'replace'),
                         packName: resourcePack.packName || null,
+                        // The card is read by whoever installs the pack, who
+                        // need not be the player the export message went to.
+                        collection: resourcePack.mode === 'addon' ? resourcePack.dlcName : null,
+                        note: exportModeNote || null,
                         slotId,
                         previewPath
                     }).catch(error => {
@@ -757,24 +878,20 @@ function bakeExportUpload(playerSource, uploadId, upload, cleanupKey = null) {
         }
     } catch (error) {
         if (cleanupKey) cleanupExportUpload(cleanupKey);
-        exportResult(playerSource, {
-            ok: false,
-            message: error?.message || 'Export failed.',
-            detail: error?.stack || String(error)
-        });
+        exportFailure(playerSource, error, 'Export failed.');
     }
 }
 
 onNet('cr-clothes:exportFinish', request => {
     const playerSource = global.source;
-    if (!hasBuilderAccess(playerSource)) {
+    const uploadId = String(request?.uploadId || '').slice(0, 80);
+    const key = playerUploadKey(playerSource, uploadId);
+    const upload = exportUploads.get(key);
+    if (!hasBuilderAccess(playerSource, uploadSlotId(upload?.meta))) {
         exportResult(playerSource, { ok: false, message: 'Export permission denied.' });
         return;
     }
 
-    const uploadId = String(request?.uploadId || '').slice(0, 80);
-    const key = playerUploadKey(playerSource, uploadId);
-    const upload = exportUploads.get(key);
     if (!upload) {
         exportResult(playerSource, { ok: false, message: 'Export upload was not found.' });
         return;
@@ -785,7 +902,7 @@ onNet('cr-clothes:exportFinish', request => {
 
 onNet('cr-clothes:exportPayload', request => {
     const playerSource = global.source;
-    if (!hasBuilderAccess(playerSource)) {
+    if (!hasBuilderAccess(playerSource, uploadSlotId(request?.meta))) {
         exportResult(playerSource, { ok: false, message: 'Export permission denied.' });
         return;
     }
@@ -808,11 +925,7 @@ onNet('cr-clothes:exportPayload', request => {
             meta: request?.meta || {}
         });
     } catch (error) {
-        exportResult(playerSource, {
-            ok: false,
-            message: error?.message || 'Invalid latent export payload.',
-            detail: error?.stack || String(error)
-        });
+        exportFailure(playerSource, error, 'Invalid latent export payload.');
     }
 });
 

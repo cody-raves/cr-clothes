@@ -96,7 +96,7 @@ function createWebhookDelivery(options) {
         }
     }
 
-    // deliver({ zipPath, name, mode, packName, slotId, sizeBytes })
+    // deliver({ zipPath, name, mode, packName, collection, note, slotId, sizeBytes })
     // -> { ok, status, detail, url }
     async function deliver(delivery) {
         const { webhookUrl, publicUrl } = settings();
@@ -123,6 +123,15 @@ function createWebhookDelivery(options) {
         ];
         if (sizeText) fields.push({ name: 'Size', value: sizeText, inline: true });
         if (delivery.mode) fields.push({ name: 'Mode', value: String(delivery.mode), inline: true });
+        // The card is what the person installing the pack reads; the export
+        // message in game went to the player who made the design. So what an
+        // installer has to know is said here too: a pack that adds a new item
+        // takes one of the few collection slots, and a pack that replaces a
+        // texture says that it does. (Discord allows 1024 characters a field.)
+        if (delivery.collection) {
+            fields.push({ name: 'Collection', value: `\`${String(delivery.collection)}\`. Each installed pack uses one clothing collection slot, and a server only has a few.`, inline: false });
+        }
+        if (delivery.note) fields.push({ name: 'Note', value: String(delivery.note).slice(0, 1024), inline: false });
 
         // The 3D preview is served from the same endpoint as the pack, so the
         // message can show the garment without anything being uploaded.

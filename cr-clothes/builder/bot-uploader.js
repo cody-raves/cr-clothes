@@ -77,7 +77,8 @@ function createUploader(options) {
         }
 
         const body = JSON.stringify({
-            name: String(pack.name || 'Unnamed design').slice(0, 120),
+            // The bot refuses a name of more than 100 characters (400 bad_name).
+            name: String(pack.name || 'Unnamed design').slice(0, 100),
             mode: String(pack.mode || 'replace'),
             fileName: path.basename(pack.zipPath),
             fileB64: fileBuffer.toString('base64'),

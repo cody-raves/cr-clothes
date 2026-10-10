@@ -34,8 +34,8 @@ garments/
 
 Drop the whole unzipped pack in — `fxmanifest.lua`, `.fxap` and anything else
 that is not clothing is ignored. **Leave the files here afterwards:** exports
-read the pack's textures from this folder. They are only ever read, never
-changed.
+read the pack's model and textures from this folder. They are only ever read,
+never changed.
 
 ## What gets read
 
@@ -65,8 +65,9 @@ restart cr-clothes
 ```
 
 On a hosted server the resource folder is read-only, so everything is packed
-into `cr-clothes-prepared.zip` instead. Run `clothbake_get` for the download
-link, extract the zip over the `cr-clothes` folder, then restart.
+into one zip instead, named `cr-clothes-prepared_` plus a random id. Run
+`clothbake_get` for the download link, extract the zip over the `cr-clothes`
+folder, then restart.
 
 ## Three things to know
 
@@ -74,11 +75,16 @@ link, extract the zip over the `cr-clothes` folder, then restart.
 game still loads the model from the pack itself, so keep `ensure <that pack>`
 in your `server.cfg`.
 
-**Packs with a `.ymt` export as new items; packs without one export as a
-replacement.** A full clothing pack ships a `<collection>.ymt`, and designs made
-on its garments export as a new addon item. A single item split out of a larger
-pack usually has no `.ymt`; designs on it export as a pack that replaces that
-garment's texture instead. `crclothes_prepare` tells you which applies.
+**Every design exports as a new item.** A design made on one of these garments
+exports as a pack that adds a new clothing item of its own, whether or not the
+pack you dropped here has a `.ymt`. By default the original garment is left as
+it is (a server set to `clothdesigner_export_mode replace` replaces it instead).
+Props are the exception: a design on a hat, glasses, an earpiece, a watch or a
+bracelet exports as a pack that replaces the prop's texture, unless
+`clothdesigner_prop_addon` is set to `true`. `crclothes_prepare` says so next
+to each prop. Each installed pack uses one of a small number of clothing
+collection slots; see "Known limits" in the admin guide. Packs of this kind
+are new in 1.1.0 and have not been tested in the game yet.
 
 **Names are guessed.** A garment is labelled from its collection and drawable
 id. Rename it in `generated/registry.json` — `displayName` is what players see.

@@ -64,7 +64,7 @@ Works with Qbox, qb-core, ESX, or no framework at all.
 3. Start the server. You should see one line:
 
    ```
-   [cr-clothes] v1.0.0 ready | garments: 0 (0 exportable) | delivery: download only (clothbake_get) | design rights: grants (oxmysql) | framework: qb | packs: /tmp/clothdesigner
+   [cr-clothes] v1.1.0 ready | garments: 0 (0 exportable) | delivery: download only (clothbake_get) | design rights: grants (oxmysql) | framework: qb | packs: /tmp/clothdesigner
    ```
 
    That line is the whole health check: how many garments are installed, how
@@ -146,8 +146,8 @@ Three things to know:
 - **Keep the pack running.** Preparing makes a garment designable; the game
   still loads the model from the pack itself. Keep `ensure <that pack>` in
   `server.cfg`.
-- **Leave the files in `garments/`.** Exports read the pack's textures from
-  there. They are only read, never changed.
+- **Leave the files in `garments/`.** Exports read the pack's model and
+  textures from there. They are only read, never changed.
 - **Names are guessed** from the collection and drawable number. Rename them
   in `generated/registry.json` — `displayName` is what players see.
 
@@ -217,6 +217,7 @@ exports['cr-clothes']:GetGrants(source)
 
 AddEventHandler('cr-clothes:designExported', function(data)
     -- data.player, data.slotId, data.packName, data.mode
+    -- data.collection: the new item's collection name (nil for a replacement pack)
 end)
 ```
 
@@ -238,11 +239,40 @@ The chat command is `Config.Command` in `config.lua`.
 
 1. Download the zip from the link and unzip it.
 2. Put the pack folder into `resources/`.
-3. Add `ensure <pack folder name>` to `server.cfg`.
+3. Add `ensure <pack folder name>` to `server.cfg`, below your other clothing
+   packs. A pack that starts before them can shift the item numbers some
+   outfit scripts have saved.
 4. Restart the server.
 
-The design is baked into the first texture slot of the garment unless the
-player chose another slot.
+**New in 1.1.0 and not yet tested in the game.** The packs described here
+have only been checked offline; none has been loaded in the game yet. Try one
+exported pack on a test server before you install packs on a live one. If the
+new item does not show up, see [Troubleshooting](#troubleshooting).
+
+Each pack adds one new clothing item in a collection of its own. The message
+the player sees in game after exporting names it, for example
+`mp_f_cd_3f9a1c0b7e2d`. So do the Discord message of the webhook and the
+`pack-manifest.json` inside the pack. The pack is built so that the new item
+sits beside the garment it was designed on and beside other designs, and
+nothing is replaced. It makes no difference whether the original pack came
+with a `.ymt`: the exported pack brings its own.
+
+The pack carries the garment's model and the design as its one texture. The
+design replaces the whole texture; nothing of the original shows through. In
+a default pack it makes no difference which texture slot the player picked in
+the designer. With `clothdesigner_export_textures all` the design takes the
+place of the picked slot.
+
+Two things to know:
+
+- Each installed pack that adds a new item uses one clothing collection slot,
+  and a server only has a few. Read [Known limits](#known-limits) before
+  installing many.
+- A design on a prop (hat, glasses, earpiece, watch, bracelet) is the
+  exception: it exports as a pack that replaces the texture of the existing
+  prop. The message in game says so, and the webhook's Discord message
+  carries the same note. See `clothdesigner_prop_addon` in the settings
+  reference.
 
 ---
 
@@ -272,7 +302,14 @@ The three `crclothes_grant…` commands also work in game for anyone with the
 | `clothdesigner_webhook_url` | Discord webhook that receives pack links |
 | `clothdesigner_public_url` | Address players connect to; used to build links |
 | `clothdesigner_bot_url`, `clothdesigner_bot_token` | Optional Discord bot |
+| `clothdesigner_export_textures all` | Packs carry every texture of the garment, with the design in the slot the player picked. Default: the design only |
+| `clothdesigner_prop_addon true` | Designs on props export as new items, like clothing. Default: they export as a replacement of the prop's texture. Not yet tested in game |
+| `clothdesigner_ymt_layout ragelib` | If a new item does not show up in game with the default, set this, export the design again and install the new pack. It writes the pack's `.ymt` (the file that describes the item to the game) in the arrangement used by the two packs this project has seen load in game. The default arrangement has not been loaded in the game yet |
+| `clothdesigner_export_mode replace` | Every design exports as a replacement of the original garment's texture instead of a new item. A replacement pack is not a collection and uses no collection slot; it needs the same entitlement |
 | `clothdesigner_debug true` | Detailed startup and export logging |
+
+The four export settings are read at every export, so a `set` typed in the
+server console applies to the next one. Any other value means the default.
 
 `config.lua`:
 
@@ -332,18 +369,49 @@ that garment. It can still be designed on with the flat preview.
 The files do not follow the clothing naming convention
 (`<collection>^<part>_<number>_u.ydd`). They are probably not ped clothing.
 
+**A new item from an exported pack does not show up in game.**
+Check that the pack's `ensure` line is in `server.cfg`, that the server was
+restarted, and that you joined after the restart. Check that your other
+clothing packs work: a pack needs the clothing entitlement on the server key.
+If all of that holds, `set clothdesigner_ymt_layout ragelib`, export the
+design again and install the new pack. New-item packs are new in 1.1.0 and
+have not been tested in the game yet.
+
 **I need more detail.**
 `set clothdesigner_debug true` in `server.cfg`, restart, and read the console.
 
 ## Known limits
 
-- **Packs without a `.ymt` export as a replacement.** A full clothing pack
-  includes its collection's `.ymt`, and designs on its garments export as a new
-  addon item. A single item split out of a larger pack usually has none;
-  designs on it export as a pack that replaces that garment's texture.
-  `crclothes_prepare` says which applies to each garment.
-- **Two designs of the same garment share a collection.** Each addon pack
-  reuses the collection name of the garment it came from, so install one
-  design per garment at a time.
-- **One texture slot per export.** A pack carries the design in the slot the
-  player picked; the garment's other slots keep their original textures.
+- **New-item packs are not yet tested in the game.** Since 1.1.0 every design
+  on clothing exports as a pack of a new kind, with a `.ymt` that cr-clothes
+  writes itself. These packs have been checked offline only. Test one before
+  relying on them.
+- **Each installed pack uses one clothing collection slot.** Every pack that
+  adds a new item is a clothing collection of its own, and the player model
+  has room for only a small number of them: roughly 3 to 8 per gender
+  depending on the game build, shared with every other clothing pack on the
+  server. Going over the limit crashes that gender's player model for
+  everyone. Install a few designs per gender, not dozens, and count your other
+  clothing packs too. A pack that replaces a texture (a prop, or any design
+  with `clothdesigner_export_mode replace`) is not a collection and uses no
+  slot. On FiveM for GTA V Enhanced a FiveM maintainer has said that no slots
+  are free at all: new items do not load there, replacements do. A way to
+  merge several designs into one collection is planned.
+- **Props export as a replacement.** A design on a hat, glasses, an earpiece,
+  a watch or a bracelet exports as a pack that replaces the texture of the
+  existing prop. The message in game and the webhook's Discord message say
+  so. `crclothes_prepare` notes it next to each prop.
+  `set clothdesigner_prop_addon true` makes props export as new items like
+  clothing; that has not been tested in game yet.
+- **A garment the new-item form cannot describe exports as a replacement.**
+  This applies to a texture whose name ends in a race suffix the game's own
+  files do not use. The pack then replaces that garment's texture, and the
+  message says why.
+- **One texture per pack.** A pack carries the design; the garment's original
+  textures stay in the original pack. `set clothdesigner_export_textures all`
+  ships every texture of the garment instead, with the design in the slot the
+  player picked.
+- **A new item is described by the garment's file names only.** Whatever else
+  the original pack's `.ymt` said about that garment (heel height, hair
+  fitting, sounds) is not carried over, and alternate meshes and cloth physics
+  files are not copied.

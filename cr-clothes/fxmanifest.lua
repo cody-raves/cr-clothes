@@ -3,7 +3,7 @@ game 'gta5'
 
 author 'cody-raves'
 description 'In-game clothing designer: players design garments, the server bakes a real addon clothing pack'
-version '1.0.0'
+version '1.1.0'
 
 lua54 'yes'
 node_version '22'

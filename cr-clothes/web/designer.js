@@ -1207,7 +1207,7 @@ function populateEditorGarments(garments, activeId) {
         option.textContent = 'No garments installed';
         garmentSelect.appendChild(option);
         garmentSelect.disabled = true;
-        garmentMeta.textContent = 'Open /clothbuilder, save garments, run clothbuilder_prepare, then reopen this editor.';
+        garmentMeta.textContent = 'Put a clothing pack into cr-clothes/garments, run crclothes_prepare in the server console, restart cr-clothes, then reopen this editor.';
         activeGarmentLabel.textContent = 'No garment selected';
         garmentCountPill.textContent = 'NO GARMENTS INSTALLED';
         populateExportTargetOptions('');
@@ -1585,7 +1585,7 @@ function renderPreparedBrowserGrid() {
             ? '<div class="browser-empty-state"><strong>No garments installed yet</strong>'
               + '<span>This designer ships without clothing. Add your own garment templates, '
               + 'then restart the resource.</span>'
-              + '<span class="browser-empty-hint">See the README section &quot;Preparing your own garments&quot;.</span></div>'
+              + '<span class="browser-empty-hint">Put a clothing pack into cr-clothes/garments and run crclothes_prepare in the server console.</span></div>'
             : '<div class="browser-empty-state"><strong>Nothing matches</strong>'
               + '<span>No garments in this gender and category. Try another tab or clear the search.</span></div>';
         return;
@@ -1599,8 +1599,8 @@ function renderPreparedBrowserGrid() {
         card.innerHTML = `
             <canvas id="${canvasId}" class="prepared-card-canvas" width="320" height="240"></canvas>
             <div class="prepared-card-copy">
-                <strong>${item.label || item.id}</strong>
-                <small>${item.categoryLabel} · drawable ${item.drawableId}</small>
+                <strong>${escapeHtml(item.label || item.id)}</strong>
+                <small>${escapeHtml(item.categoryLabel)} · drawable ${escapeHtml(item.drawableId)}</small>
             </div>`;
         card.addEventListener('click', () => {
             browserIndex = index;

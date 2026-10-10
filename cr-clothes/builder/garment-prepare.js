@@ -26,27 +26,41 @@
 'use strict';
 
 const path = require('node:path');
+const YmtWriter = require('./ymt-writer.js');
 
-// Component slots keyed by the prefix GTA uses in clothing filenames.
-const COMPONENT_BY_PREFIX = {
-    head: { componentId: 0, category: 'head', kind: 'component' },
-    berd: { componentId: 1, category: 'masks', kind: 'component' },
-    hair: { componentId: 2, category: 'hair', kind: 'component' },
-    uppr: { componentId: 3, category: 'arms', kind: 'component' },
-    lowr: { componentId: 4, category: 'pants', kind: 'component' },
-    hand: { componentId: 5, category: 'bags', kind: 'component' },
-    feet: { componentId: 6, category: 'shoes', kind: 'component' },
-    teef: { componentId: 7, category: 'teeth', kind: 'component' },
-    accs: { componentId: 8, category: 'accessories', kind: 'component' },
-    task: { componentId: 9, category: 'armor', kind: 'component' },
-    decl: { componentId: 10, category: 'decals', kind: 'component' },
-    jbib: { componentId: 11, category: 'tops', kind: 'component' },
-    p_head: { componentId: 0, category: 'hats', kind: 'prop' },
-    p_eyes: { componentId: 1, category: 'glasses', kind: 'prop' },
-    p_ears: { componentId: 2, category: 'ears', kind: 'prop' },
-    p_lhand: { componentId: 6, category: 'watches', kind: 'prop' },
-    p_rhand: { componentId: 7, category: 'bracelets', kind: 'prop' }
+// What the designer files each slot under, keyed by the prefix GTA uses in
+// clothing filenames.
+const CATEGORY_BY_PREFIX = {
+    head: 'head',
+    berd: 'masks',
+    hair: 'hair',
+    uppr: 'arms',
+    lowr: 'pants',
+    hand: 'bags',
+    feet: 'shoes',
+    teef: 'teeth',
+    accs: 'accessories',
+    task: 'armor',
+    decl: 'decals',
+    jbib: 'tops',
+    p_head: 'hats',
+    p_eyes: 'glasses',
+    p_ears: 'ears',
+    p_lwrist: 'watches',
+    p_rwrist: 'bracelets'
 };
+
+// Component slots and prop anchors by prefix. The prefixes and their numbers
+// are the .ymt writer's tables, so a garment is recognised here by the same
+// names an export of it is written with (watches and bracelets are p_lwrist
+// and p_rwrist, anchors 6 and 7). For a prop, componentId is the anchor id.
+const COMPONENT_BY_PREFIX = {};
+YmtWriter.COMPONENT_PREFIXES.forEach((prefix, componentId) => {
+    COMPONENT_BY_PREFIX[prefix] = { componentId, category: CATEGORY_BY_PREFIX[prefix], kind: 'component' };
+});
+for (const [anchorId, anchor] of Object.entries(YmtWriter.PROP_ANCHORS)) {
+    COMPONENT_BY_PREFIX[anchor.prefix] = { componentId: Number(anchorId), category: CATEGORY_BY_PREFIX[anchor.prefix], kind: 'prop' };
+}
 
 // Prefixes are matched longest-first so p_head wins over head.
 const PREFIXES = Object.keys(COMPONENT_BY_PREFIX).sort((a, b) => b.length - a.length);
@@ -140,7 +154,8 @@ function groupGarments(parsedFiles) {
         }
         const garment = garments.get(key);
         if (entry.type === 'mesh') {
-            // Prefer the _u (universal) mesh; _r is the rare "ragged" variant.
+            // One drawable has one mesh. Should a pack carry both spellings,
+            // prefer _u; _r is the form of a mesh that shows skin.
             if (!garment.mesh || entry.suffix === 'u') garment.mesh = entry;
         } else {
             garment.textures.push(entry);
@@ -152,13 +167,23 @@ function groupGarments(parsedFiles) {
     return [...garments.values()];
 }
 
-// A pack's files are grouped under '<ped>_<dlc>' (for example
-// mp_f_freemode_01_mp_f_mypack, or mp_f_freemode_01_p_mp_f_mypack for props),
-// but in game the collection is known by its dlc name. The client matches on
-// this short name, so it has to be recorded separately from the folder name.
-function shortCollectionName(fullCollection) {
-    return String(fullCollection)
-        .replace(/^mp_[fm]_freemode_01_(p_)?/i, '')
+// A pack's component files are grouped under the collection's own name,
+// '<ped>_<dlc>' (mp_f_freemode_01_mp_f_mypack). Its prop files are grouped
+// under '<ped>_p_<dlc>' (mp_f_freemode_01_p_mp_f_mypack) and still belong to
+// that same collection: there is one .ymt, '<ped>_<dlc>.ymt', for both. Only
+// a prop folder carries the extra 'p_', so it is only taken off for a prop; a
+// component collection may be called 'p_...' in its own right.
+function collectionOfFolder(folder, kind) {
+    return kind === 'prop'
+        ? String(folder).replace(/^(mp_[fm]_freemode_01_)p_/i, '$1')
+        : String(folder);
+}
+
+// In game the collection is known by its dlc name. The client matches on this
+// short name, so it has to be recorded separately from the folder name.
+function shortCollectionName(folder, kind) {
+    return collectionOfFolder(folder, kind)
+        .replace(/^mp_[fm]_freemode_01_/i, '')
         .replace(/^mp_[fm]_/i, '');
 }
 
@@ -170,7 +195,7 @@ function slotIdFor(garment, gender) {
 // A readable default name. Owners rename these later; the point is that nothing
 // is labelled by a bare drawable id, which is what produced earlier mislabels.
 function displayNameFor(garment, gender, component) {
-    const collection = String(garment.collection)
+    const collection = collectionOfFolder(garment.collection, component.kind)
         .replace(/^mp_[fm]_freemode_01_mp_[fm]_/i, '')
         .replace(/[_^]+/g, ' ')
         .trim();
@@ -209,7 +234,9 @@ function buildGarmentRecords(garment, options) {
         category: component.category,
         ...(component.kind === 'prop' ? { anchorId: component.componentId } : { componentId: component.componentId }),
         prefix: garment.prefix,
-        collection: shortCollectionName(garment.collection),
+        collection: shortCollectionName(garment.collection, component.kind),
+        // The folder the files are in. For a prop that is '<ped>_p_<dlc>',
+        // the name its texture dictionaries go by, so it is kept as it is.
         fullCollection: garment.collection,
         drawableId: garment.drawable,
         textureCount: textureFiles.length,
@@ -235,10 +262,9 @@ function buildGarmentRecords(garment, options) {
     templateFiles[registryEntry.modelFile] = sourceRoot + '/' + garment.mesh.sourcePath;
     for (const texture of garment.textures) templateFiles[texture.fileName] = sourceRoot + '/' + texture.sourcePath;
     registryEntry.templateFiles = templateFiles;
-    // A pack that ships its collection's .ymt can be exported as a new addon
-    // item; one without it can only be exported as a texture replacement.
-    const ymtSource = (options.ymtByCollection || {})[String(garment.collection).toLowerCase()];
-    registryEntry.templateYmt = ymtSource ? sourceRoot + '/' + ymtSource : null;
+    // The pack's own .ymt is not recorded: an export describes its one item
+    // with a .ymt of its own, so it makes no difference whether the pack
+    // shipped one.
 
     const packDescriptor = {
         version: 1,
@@ -249,7 +275,7 @@ function buildGarmentRecords(garment, options) {
         kind: component.kind,
         category: component.category,
         componentId: component.componentId,
-        collection: shortCollectionName(garment.collection),
+        collection: shortCollectionName(garment.collection, component.kind),
         fullCollection: garment.collection,
         drawableId: garment.drawable,
         textureCount: textureFiles.length,
@@ -279,17 +305,10 @@ function prepare(options) {
         else if (/\.(ydd|ytd)$/i.test(file)) unrecognised.push(path.basename(file));
     }
 
-    // <collection>.ymt, when the pack includes one.
-    const ymtByCollection = {};
-    for (const file of files) {
-        const base = path.basename(String(file).split('\\').join('/'));
-        if (/\.ymt$/i.test(base)) ymtByCollection[base.slice(0, -4).toLowerCase()] = file;
-    }
-
     const garments = [];
     const skipped = [];
     for (const group of groupGarments(parsed)) {
-        const built = buildGarmentRecords(group, { ...options, ymtByCollection });
+        const built = buildGarmentRecords(group, options);
         if (built.ok) garments.push(built);
         else skipped.push(built);
     }

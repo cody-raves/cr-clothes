@@ -617,8 +617,12 @@ function checkCapability(options) {
     const slots = Array.isArray(registry?.slots) ? registry.slots : [];
     const generated = slots.filter(slot => String(slot?.assetMode || '').toLowerCase() === 'generated');
     result.generatedSlots = generated.length;
+    // Owner-prepared garments (templateFiles) are never baked in place, so
+    // their folders are left alone: a probe is a marker file written and
+    // deleted beside the owner's own clothing.
+    const bakedInPlace = generated.filter(slot => !slot?.templateFiles);
 
-    for (const slot of generated) {
+    for (const slot of bakedInPlace) {
         try {
             const resolved = resolveSlotYtdPath(resourceRoot, slot, 0);
             if (fs.existsSync(resolved.ytdPath)) {
@@ -664,6 +668,10 @@ function checkCapability(options) {
     }
     if (!result.generatedSlots) {
         result.message = 'Hosted bake ready for runtime previews. Add a prepared addon template pack before baking streamable YTD variants.';
+        return result;
+    }
+    if (!bakedInPlace.length) {
+        result.message = `In-place baking has nothing to bake into: all ${result.generatedSlots} garment(s) are owner-prepared, and those are only ever read. Exports do not need it.`;
         return result;
     }
     if (!result.preparedTextureFiles) {

@@ -223,7 +223,7 @@
         setPreviewFallback('Loading 3D garment mesh…', garment?.label || garment?.id || 'Prepared OBJ preview', true);
 
         if (!preview?.exact || !preview?.model || !preview?.uvGuide) {
-            statusMessage = 'Preview not prepared — run clothbuilder_prepare';
+            statusMessage = 'Preview not prepared — run crclothes_prepare';
             setPreviewFallback('Preview not prepared', 'This garment has no generated OBJ/UV preview.', true);
             loadingKey = '';
             return;

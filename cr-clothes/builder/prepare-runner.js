@@ -105,7 +105,10 @@ function runPrepare(options) {
         }
         log('  + ' + entry.gender + '/' + entry.category + ' drawable ' + entry.drawableId + ' -- '
             + entry.textureCount + ' texture slot(s) -- "' + entry.displayName + '"');
-        log('      ' + meshNote + (entry.templateYmt ? '' : '; no .ymt in the pack, so exports replace this garment\'s texture'));
+        // Clothing exports as a new item whether or not the pack has a .ymt.
+        // Props are the one case an owner has to switch on, so say it here
+        // rather than let the first exported hat be a surprise.
+        log('      ' + meshNote + (entry.kind === 'prop' ? '; exports replace this prop\'s texture unless clothdesigner_prop_addon is true' : ''));
     }
     for (const skip of result.skipped) {
         log('  - skipped ' + skip.collection + '/' + skip.prefix + '_' + skip.drawable + ': ' + skip.problems.join('; '));
