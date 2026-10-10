@@ -89,9 +89,9 @@ folder is read-only.
 The full walkthrough — delivery options, permissions, hosted servers,
 troubleshooting — is in **[docs/ADMIN-GUIDE.md](docs/ADMIN-GUIDE.md)**.
 
-Requires a FiveM artifact with the Node 22 runtime. Streaming custom clothing
-is free for servers with 10 slots or fewer; larger servers need the Cfx.re
-"Stream Custom Clothing" entitlement.
+Streaming custom clothing needs the Cfx.re "Stream Custom Clothing"
+entitlement on your server key, as with any clothing pack. The resource also
+needs a FiveM artifact with the Node 22 runtime.
 
 ---
 

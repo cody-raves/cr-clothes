@@ -38,9 +38,8 @@ No website, no outside bake service, no account, no store in the middle.
 ## Requirements
 
 - A FiveM server on a recent artifact (the resource uses the Node 22 runtime).
-- Permission to stream custom clothing. This is free for servers with 10 slots
-  or fewer; larger servers need the Cfx.re "Stream Custom Clothing"
-  entitlement.
+- The Cfx.re "Stream Custom Clothing" entitlement on your server key, as
+  with any clothing pack.
 - Clothing you have the right to use and modify. **cr-clothes ships with no
   garments** — you add your own.
 - Optional: a Discord channel webhook, for delivery.
