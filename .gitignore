@@ -1,0 +1,13 @@
+# never commit game files, owner clothing, baked packs or secrets
+cr-clothes/garments/*
+!cr-clothes/garments/README.md
+cr-clothes/generated/previews/
+cr-clothes/output/
+cr-clothes/stream/
+clothdesigner-bot/node_modules/
+clothdesigner-bot/data/
+.env
+*.ydd
+*.ytd
+*.ymt
+*.rpf

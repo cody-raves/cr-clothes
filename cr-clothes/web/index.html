@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en" style="background: transparent">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cr-clothes</title>
+    <link rel="stylesheet" href="style.css?v=17">
+</head>
+<body>
+    <main id="app" class="app is-hidden" aria-hidden="true">
+        <section id="designerStudio" class="studio">
+            <header class="topbar">
+                <div class="brand">
+                    <span class="brand-mark"><img src="img/logo.png" alt="" class="brand-logo"></span>
+                    <div>
+                        <p class="eyebrow">CLOTHING DESIGNER</p>
+                        <h1>cr-clothes</h1>
+                    </div>
+                </div>
+
+                <nav class="tools" aria-label="Editor tools">
+                    <button id="selectToolButton" class="tool is-active" type="button"><span>↖</span>Select</button>
+                    <button id="addTextToolButton" class="tool" type="button"><span>T</span>Text</button>
+                    <button id="drawToolButton" class="tool" type="button"><span>✎</span>Draw</button>
+                    <button id="imageToolButton" class="tool" type="button"><span>▧</span>Image</button>
+                </nav>
+
+                <div class="profile">
+                    <span id="garmentCountPill" class="catalogue-pill">CATALOGUE</span>
+                    <button id="closeButton" class="icon-button" type="button" aria-label="Close">×</button>
+                </div>
+            </header>
+
+            <div class="workspace">
+                <aside class="library">
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">DESIGNS</p>
+                            <h2>Designs</h2>
+                        </div>
+                        <button class="mini-button" type="button">+</button>
+                    </div>
+
+                    <div class="garment-picker">
+                        <label for="garmentSelect">Garment</label>
+                        <select id="garmentSelect" class="designer-select">
+                            <option value="">Loading garments…</option>
+                        </select>
+                        <button id="openGarmentBrowserButton" class="secondary-button garment-browser-button" type="button">Browse garments</button>
+                        <small id="garmentMeta">Open the visual browser to switch gender, category, collection, and garment template.</small>
+                    </div>
+
+                    <article class="design-card is-selected">
+                        <canvas id="designThumb" class="design-thumb" width="320" height="320" aria-label="Your design"></canvas>
+                        <strong id="activeGarmentLabel">Active garment</strong>
+                        <span>EDITING</span>
+                    </article>
+
+                                    </aside>
+
+                <section class="live-preview isolated-preview">
+                    <div class="pane-title">
+                        <span class="live-dot"></span>
+                        <strong>PREVIEW · DRAG TO ROTATE · WHEEL TO ZOOM</strong>
+                    </div>
+                    <div class="garment-preview-stage">
+                        <div id="garmentPreviewViewport" class="garment-preview-viewport">
+                            <canvas id="garmentPreviewCanvas" width="720" height="720" aria-label="Exact 3D garment preview"></canvas>
+                            <div id="garmentPreviewFallback" class="garment-preview-fallback">
+                                <strong>Loading 3D garment mesh…</strong>
+                                <span>Prepared OBJ preview</span>
+                            </div>
+                            <div class="camera-hint">DRAG TO ROTATE · WHEEL TO ZOOM</div>
+                        </div>
+                        <div class="preview-badge"><span id="previewGarmentType">GARMENT</span><small>Exact NUI mesh preview</small></div>
+                    </div>
+                    <div class="preview-controls">
+                        <button id="rotateLeftButton" type="button" aria-label="Rotate left">↶</button>
+                        <button id="resetPreviewButton" type="button">Reset view</button>
+                        <button id="wearButton" type="button">Wear in game</button>
+                        <button id="rotateRightButton" type="button" aria-label="Rotate right">↷</button>
+                    </div>
+                </section>
+
+                <section class="editor-pane">
+                    <div class="pane-title split">
+                        <strong>UV EDITOR</strong>
+                        <span class="uv-title-actions"><span>1024 × 1024</span><button id="toggleUvGuide" class="uv-toggle is-active" type="button">UV GUIDE ON</button></span>
+                    </div>
+                    <div class="canvas-shell">
+                        <canvas id="designerCanvas" width="1024" height="1024"></canvas>
+                    </div>
+                    <div class="editor-footer">
+                        <span>SELECT</span>
+                        <p>Drag the text directly on the texture.</p>
+                        <output id="coordinates">X 512 · Y 512</output>
+                    </div>
+                </section>
+
+                <aside class="inspector">
+                    <section class="layers">
+                        <div class="section-heading compact">
+                            <div>
+                                <p class="eyebrow">LAYERS</p>
+                                <h2><span id="layerCount">2</span> layers</h2>
+                            </div>
+                        </div>
+
+                        <div id="layerList" class="layer-list"></div>
+
+                        <button id="fillLayerRow" class="layer-row" type="button">
+                            <span id="fillSwatch" class="layer-icon swatch"></span>
+                            <span><strong>Garment fill</strong><small>Background layer</small></span>
+                            <span class="eye">●</span>
+                        </button>
+                    </section>
+
+                    <section class="properties">
+                        <p class="eyebrow">LAYER PROPERTIES</p>
+                        <p id="propertyHint" class="property-hint">Select a layer to edit it. Right-click a text, image, or draw layer for layer options.</p>
+
+                        <div id="fillProperties" class="property-group">
+                            <label>
+                                Garment color
+                                <input id="background" type="color" value="#1d4ed8">
+                            </label>
+                        </div>
+
+                        <div id="textProperties" class="property-group is-hidden">
+                            <label>
+                                Text
+                                <input id="text" type="text" maxlength="40" value="">
+                            </label>
+                            <label>
+                                Text color
+                                <input id="textColor" type="color" value="#ffffff">
+                            </label>
+                        </div>
+
+                        <div id="imageProperties" class="property-group is-hidden">
+                            <div class="image-import">
+                                <p class="eyebrow">IMAGE</p>
+                                <button id="openImageDialogButton" class="secondary-button" type="button">Add another image URL</button>
+                                <p id="imageHelp" class="image-help">Paste a direct HTTPS link to a PNG, JPEG, WebP, or animated GIF.</p>
+                            </div>
+                        </div>
+
+                        <div id="drawProperties" class="property-group is-hidden">
+                            <div class="draw-toolbar">
+                                <p class="eyebrow">DRAW</p>
+                                <div class="draw-mode-row" role="group" aria-label="Draw mode">
+                                    <button id="drawBrushMode" class="secondary-button is-active" type="button">Paint</button>
+                                    <button id="drawEraserMode" class="secondary-button" type="button">Erase</button>
+                                </div>
+                            </div>
+                            <label>
+                                Brush color
+                                <input id="drawColor" type="color" value="#ffffff">
+                            </label>
+                            <label>
+                                Brush size
+                                <div class="range-with-value">
+                                    <input id="drawSize" type="range" min="2" max="120" value="24">
+                                    <output id="drawSizeValue">24px</output>
+                                </div>
+                            </label>
+                            <div class="draw-actions">
+                                <button id="drawUndoButton" class="secondary-button" type="button">Undo</button>
+                                <button id="drawRedoButton" class="secondary-button" type="button">Redo</button>
+                                <button id="clearDrawButton" class="secondary-button danger-button" type="button">Clear draw layer</button>
+                            </div>
+                        </div>
+
+                        <div id="commonLayerProperties" class="property-group is-hidden">
+                            <label>
+                                Blend mode
+                                <select id="blendMode" class="designer-select">
+                                    <option value="normal">Normal</option>
+                                    <option value="multiply">Multiply</option>
+                                    <option value="screen">Screen</option>
+                                    <option value="overlay">Overlay</option>
+                                    <option value="darken">Darken</option>
+                                    <option value="lighten">Lighten</option>
+                                    <option value="color-dodge">Color dodge</option>
+                                    <option value="color-burn">Color burn</option>
+                                    <option value="hard-light">Hard light</option>
+                                    <option value="soft-light">Soft light</option>
+                                    <option value="difference">Difference</option>
+                                    <option value="exclusion">Exclusion</option>
+                                    <option value="hue">Hue</option>
+                                    <option value="saturation">Saturation</option>
+                                    <option value="color">Color</option>
+                                    <option value="luminosity">Luminosity</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <!-- Kept for compatibility with the existing input handlers; hidden from the inspector. -->
+                        <div class="is-hidden" aria-hidden="true">
+                            <input id="size" type="range" min="24" max="420" value="190">
+                            <input id="rotation" type="range" min="-180" max="180" value="0">
+                            <div id="textLayerActions">
+                                <button id="flipTextHorizontal" type="button">Flip horizontal</button>
+                                <button id="flipTextVertical" type="button">Flip vertical</button>
+                                <button id="removeTextButton" type="button">Delete text layer</button>
+                            </div>
+                            <div id="imageControls">
+                                <input id="imageScale" type="range" min="10" max="300" value="100">
+                                <output id="imageScaleValue">100%</output>
+                                <input id="imageRotation" type="range" min="-180" max="180" value="0">
+                                <output id="imageRotationValue">0°</output>
+                                <input id="imageOpacity" type="range" min="0" max="100" value="100">
+                                <output id="imageOpacityValue">100%</output>
+                                <button id="flipImageHorizontal" type="button">Flip horizontal</button>
+                                <button id="flipImageVertical" type="button">Flip vertical</button>
+                                <button id="removeImageButton" type="button">Remove image</button>
+                            </div>
+                        </div>
+                    </section>
+                </aside>
+            </div>
+
+            <footer class="statusbar">
+                <p id="status" class="status">Local live preview ready</p>
+                <div class="export-controls">
+                    <label class="is-hidden dev-only">
+                        Bake target
+                        <select id="exportTargetSelect"></select>
+                    </label>
+                    <label class="is-hidden dev-only">
+                        Variant
+                        <select id="exportTextureIndex"></select>
+                    </label>
+                    <button id="publishButton" class="secondary-button" type="button" title="Hide the interface and look at your design on your character. Press ESC or BACKSPACE to come back.">View on my character</button>
+                    <button id="exportButton" class="primary" type="button" title="Bake this design into an installable clothing pack.">Export clothing pack</button>
+                </div>
+            </footer>
+        </section>
+
+        <section id="builderStudio" class="builder-studio is-hidden">
+            <header class="builder-header prepared-browser-header">
+                <div class="brand"><span class="brand-mark"><img src="img/logo.png" alt="" class="brand-logo"></span><div><p class="eyebrow">CATALOGUE</p><h1>Garment Browser</h1></div></div>
+                <div class="builder-header-copy"><strong>Choose a garment to design.</strong><span>Pick a gender and category, then double-click a garment to start designing.</span></div>
+                <button id="closeBuilderButton" class="icon-button" type="button">×</button>
+            </header>
+
+            <div class="prepared-browser-layout">
+                <aside class="prepared-browser-sidebar">
+                    <div class="prepared-browser-toolbar">
+                        <div class="browser-gender-switch" id="browserGenderSwitch" role="tablist" aria-label="Gender switch">
+                            <button type="button" class="browser-toggle is-active" data-gender="male">Male</button>
+                            <button type="button" class="browser-toggle" data-gender="female">Female</button>
+                        </div>
+                        <input id="browserGender" type="hidden" value="male">
+
+                        <div id="browserCategoryTabs" class="browser-category-tabs"></div>
+                        <input id="browserCategory" type="hidden" value="tops">
+
+                        <label>
+                            Search garments
+                            <input id="browserSearch" class="builder-input" placeholder="Search name or collection">
+                        </label>
+                    </div>
+
+                    <div class="prepared-grid-heading">
+                        <div><p class="eyebrow">GARMENTS</p><h2 id="browserGridCount">0 items</h2></div>
+                        <span id="browserCounter" class="browser-counter-pill">0 / 0</span>
+                    </div>
+
+                    <div id="browserGrid" class="prepared-garment-grid" aria-label="Prepared garment grid"></div>
+                </aside>
+
+                <main class="prepared-browser-preview">
+                    <div class="pane-title"><span class="live-dot"></span><strong>3D PREVIEW</strong></div>
+                    <div class="prepared-preview-stage">
+                        <canvas id="browserPreviewCanvas" width="900" height="900" aria-label="Prepared garment 3D preview"></canvas>
+                        <div id="browserPreviewEmpty" class="browser-preview-empty is-hidden">No garment selected.</div>
+                    </div>
+                    <div class="prepared-preview-controls">
+                        <button id="browserRotateLeft" type="button">↶</button>
+                        <button id="browserResetCamera" type="button">Reset view</button>
+                        <button id="browserRotateRight" type="button">↷</button>
+                    </div>
+                </main>
+
+                <aside class="prepared-browser-details">
+                    <section class="prepared-detail-card">
+                        <p class="eyebrow">GARMENT DETAILS</p>
+                        <h2 id="browserDetailTitle">Select a garment</h2>
+                        <p id="browserDetailSubtitle">Choose a garment from the catalogue.</p>
+
+                        <dl class="browser-stats">
+                            <div><dt>Model</dt><dd id="browserStatModel">—</dd></div>
+                            <div><dt>Collection</dt><dd id="browserStatCollection">—</dd></div>
+                            <div><dt>Drawable</dt><dd id="browserStatDrawable">—</dd></div>
+                        </dl>
+
+                        <div class="prepared-slot-section">
+                            <div class="prepared-slot-heading"><p class="eyebrow">DESIGN SLOTS</p><span id="browserSlotCount"></span></div>
+                            <div id="browserSlotGrid" class="prepared-slot-grid"></div>
+                        </div>
+
+                        <button id="browserSelect" class="primary use-template-button">Design this garment</button>
+                        <p id="builderStatus" class="builder-status">Choose a garment to begin.</p>
+                    </section>
+                </aside>
+            </div>
+        </section>
+
+<div id="layerContextMenu" class="layer-context-menu is-hidden" role="menu">
+            <button type="button" data-layer-action="scale">Scale</button>
+            <button type="button" data-layer-action="rotate">Rotate</button>
+            <button type="button" data-layer-action="opacity">Opacity</button>
+            <div class="context-separator"></div>
+            <button type="button" data-layer-action="flip-horizontal">Flip horizontal</button>
+            <button type="button" data-layer-action="flip-vertical">Flip vertical</button>
+            <div class="context-separator"></div>
+            <button type="button" data-layer-action="duplicate">Duplicate layer</button>
+            <button type="button" data-layer-action="move-up">Move layer up</button>
+            <button type="button" data-layer-action="move-down">Move layer down</button>
+            <div class="context-separator"></div>
+            <button type="button" data-layer-action="delete" class="context-danger">Delete layer</button>
+        </div>
+
+        <div id="layerAdjustPopover" class="layer-adjust-popover is-hidden">
+            <div class="adjust-heading"><strong id="layerAdjustTitle">Adjust layer</strong><output id="layerAdjustValue"></output></div>
+            <input id="layerAdjustRange" type="range">
+            <button id="closeLayerAdjust" type="button">Done</button>
+        </div>
+
+        <div id="imageDialog" class="dialog-backdrop is-hidden" role="dialog" aria-modal="true" aria-labelledby="imageDialogTitle">
+            <section class="image-dialog">
+                <header>
+                    <div>
+                        <p class="eyebrow">IMAGE LAYER</p>
+                        <h2 id="imageDialogTitle">Add image from URL</h2>
+                    </div>
+                    <button id="closeImageDialogButton" class="icon-button" type="button" aria-label="Close image dialog">×</button>
+                </header>
+
+                <div class="dialog-content">
+                    <label>
+                        Direct public HTTPS image or GIF link
+                        <input id="imageUrl" type="url" placeholder="https://example.com/image.gif">
+                    </label>
+                    <p class="image-help">The link must point directly to a PNG, JPEG, WebP, or animated GIF—not an HTML webpage.</p>
+                    <p id="imageDialogError" class="dialog-error"></p>
+                </div>
+
+                <footer class="dialog-actions">
+                    <button id="cancelImageDialogButton" class="secondary-button" type="button">Cancel</button>
+                    <button id="loadUrlButton" class="primary" type="button">Add image</button>
+                </footer>
+            </section>
+        </div>
+    </main>
+
+    <script src="designer.js?v=38"></script>
+    <script src="browser-preview.js?v=4"></script>
+    <script src="exact-preview.js?v=37"></script>
+</body>
+</html>

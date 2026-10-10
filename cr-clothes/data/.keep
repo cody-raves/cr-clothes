@@ -1,0 +1,2 @@
+Placeholder so the data/ folder exists in the resource package.
+SaveResourceFile cannot create directories, so writable-output folders must be shipped.
