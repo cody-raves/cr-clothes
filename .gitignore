@@ -11,3 +11,7 @@ clothdesigner-bot/data/
 *.ytd
 *.ymt
 *.rpf
+# what recording the walkthrough GIF leaves behind (site/README.md)
+node_modules/
+site/**/frames/
+site/**/stills/

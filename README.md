@@ -3,6 +3,12 @@
 **Custom clothing designed in game, baked on your own server, delivered to your
 Discord. Free, open source, and entirely self-contained.**
 
+<p align="center">
+  <a href="https://cody-raves.github.io/cr-clothes/first-install/"><img src="docs/assets/first-install.gif" width="100%" alt="Animation of a first install of cr-clothes in ten screens: download it, copy the cr-clothes folder into resources, add the lines to server.cfg, start the server, add a clothing pack, design in game, get the download link in Discord, install the exported pack."></a>
+  <br>
+  <sub>The <a href="https://cody-raves.github.io/cr-clothes/first-install/">interactive version</a> lets you step through at your own pace.</sub>
+</p>
+
 Players open a designer on their own character and paint a garment on its real
 UV map with a live 3D preview. Your server bakes the design into a proper
 clothing resource and posts a download link to your Discord. Drop the pack into
@@ -86,6 +92,9 @@ folder is read-only.
    pack**.
 5. The link arrives in Discord. Install the pack like any clothing resource.
 
+The [interactive first-install walkthrough](https://cody-raves.github.io/cr-clothes/first-install/)
+shows these steps one screen at a time.
+
 The full walkthrough — delivery options, permissions, hosted servers,
 troubleshooting — is in **[docs/ADMIN-GUIDE.md](docs/ADMIN-GUIDE.md)**.
 
@@ -167,7 +176,14 @@ cr-clothes/             the FiveM resource — this is what you install
   bridge/framework.lua  framework adapter
 clothdesigner-bot/      optional Discord bot, if you prefer it to a webhook
 docs/ADMIN-GUIDE.md     setup and day-to-day use
+docs/                   also the project site, as GitHub Pages serves it (generated)
+site/                   source of the project site
 ```
+
+Apart from the Markdown files at its top level, everything in `docs/` is
+generated: it is the site at <https://cody-raves.github.io/cr-clothes/>, built
+from `site/` with `node site/build.js`. Change the source in `site/`, not the
+files in `docs/`.
 
 ---
 

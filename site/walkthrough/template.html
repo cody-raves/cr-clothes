@@ -1,0 +1,1275 @@
+<!doctype html>
+<html lang="en" class="no-js">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>First-install walkthrough | cr-clothes</title>
+<meta name="description" content="Install cr-clothes on a FiveM server, one screen at a time: download, server.cfg, adding your clothing, designing in game and installing the exported pack.">
+<link rel="canonical" href="{{PAGE_URL}}">
+<meta name="theme-color" content="#06080d">
+<link rel="icon" type="image/png" href="../assets/favicon.png">
+<link rel="apple-touch-icon" href="../assets/favicon.png">
+{{SOCIAL_TAGS}}
+<!-- Fonts: the one outside request of this page. The style sheet is fetched
+     without holding up the page (it arrives as a print sheet and is switched
+     on when it is there); every text has a system fallback, and the player
+     waits for the fonts for a moment only (see fontsSettled in the script). -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" id="fontSheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap" media="print" onload="this.media='all';this.setAttribute('data-done','')" onerror="this.setAttribute('data-done','')">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@400;500;700&amp;display=swap"></noscript>
+<script>
+/* Runs before anything is drawn. The style sheet shows the player only when
+   <html> has the class "js"; until then (scripts off, or a browser too old
+   for the player) the page is the written steps and a note. ?embed=1 is read
+   here as well, so an embedded player never flashes the whole page first. */
+(function (html) {
+    if (!('attachShadow' in Element.prototype) || !('ResizeObserver' in window) || !('URLSearchParams' in window)) return;
+    html.className = /[?&]embed=1(&|$)/.test(location.search) ? 'js is-embed' : 'js';
+})(document.documentElement);
+</script>
+<style>
+/* Layout: one 16:9 stage that plays like a video. A step rail on top, the
+   actual screen for that step in the middle, a large caption underneath.
+   Single dark look on purpose: it is footage of a dark in-game tool.
+
+   The classes of the stage (everything from "stage chrome" to "cursor") are
+   short and unprefixed. The page around the stage therefore uses its own
+   names (site-, page-, player-, step-) and never styles a bare element. */
+:root {
+    color-scheme: dark;
+    --bg: #06080d;
+    --stage: #0a0e16;
+    --panel: #0f1521;
+    --panel-2: #161e2d;
+    --line: rgba(255, 255, 255, 0.1);
+    --ink: #f4f7ff;
+    --muted: #8792a8;
+    --accent: #6f86ff;
+    --accent-2: #9f6bff;
+    --ok: #7fe0a2;
+    --warn: #ffd27a;
+    --font: Inter, ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+:root {
+    --accent-fill: #4f64ea;     /* the accent, deep enough for white text on it */
+    --link: #9db0ff;
+    --soft: #b6c0d6;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { background: var(--bg); -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--font); }
+:focus-visible { outline: 2px solid var(--link); outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+
+/* ---- page ---- */
+/* One column for the whole page: as wide as the window allows and at most the
+   stage's own 1280px. In a wide window it is narrowed until the header, the
+   heading, the stage and its buttons fit into the window's height together
+   (164px is what the others take), but not below 880px: under that the
+   stage's text is too small to read, so the buttons are scrolled to instead.
+   The last term keeps the stage alone from being taller than the window,
+   which is what a phone held sideways needs. */
+.page-col { width: min(calc(100% - 32px), 1280px, max(880px, calc((100vh - 164px) * 16 / 9)), calc((100vh - 16px) * 16 / 9)); margin-inline: auto; }
+/* Where a phone's address bar comes and goes, the same with the smaller height. */
+@supports (height: 1svh) { .page-col { width: min(calc(100% - 32px), 1280px, max(880px, calc((100svh - 164px) * 16 / 9)), calc((100svh - 16px) * 16 / 9)); } }
+.page { display: block; padding-block: 12px 48px; }
+.page-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 14px; margin-bottom: 10px; }
+.page-head h1 { margin: 0; font-size: 20px; line-height: 1.3; font-weight: 800; letter-spacing: -0.01em; }
+.page-head p { margin: 0; color: var(--muted); font-size: 14px; }
+.nojs-note { display: none; margin: 0 0 4px; padding: 12px 14px; border: 1px solid rgba(111, 134, 255, 0.3); border-radius: 8px; background: rgba(111, 134, 255, 0.1); color: #c9d2e6; font-size: 15px; }
+.no-js .nojs-note { display: block; }
+.no-js .player, .no-js .js-only { display: none; }
+
+/* ---- player ---- */
+.player { display: flex; flex-direction: column; gap: 12px; }
+.stage-wrap { position: relative; width: 100%; aspect-ratio: 16 / 9; max-width: 100%; overflow: hidden; background: var(--stage); border: 1px solid var(--line); border-radius: 10px; }
+@supports not (aspect-ratio: 16 / 9) { .stage-wrap::before { content: ""; display: block; padding-top: 56.25%; } }
+.stage-wrap:focus { outline: none; }                 /* focused by the script only, while it fills the screen */
+.stage-wrap:fullscreen { border: 0; border-radius: 0; }
+.stage-wrap:-webkit-full-screen { border: 0; border-radius: 0; }
+/* The stage is a fixed 1280 x 720 picture that the script scales to its box.
+   Its base font is set here, so nothing the page says about text reaches it. */
+.stage { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; transform-origin: 0 0; font: 400 14px/normal var(--font); }
+.js:not([data-player]) .stage { visibility: hidden; }      /* drawn for the first time when the fonts are in */
+
+
+/* ---- stage chrome ---- */
+.topbar { position: absolute; inset: 0 0 auto 0; height: 52px; display: flex; align-items: center; gap: 12px; padding: 0 24px; border-bottom: 1px solid var(--line); }
+.topbar img { width: 30px; height: 30px; object-fit: contain; }
+.topbar .name { font-weight: 800; font-size: 16px; letter-spacing: 0.01em; }
+.topbar .what { color: var(--muted); font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; }
+.rail { margin-left: auto; display: flex; align-items: center; gap: 5px; }
+.rail i { width: 26px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); }
+.rail i.done { background: rgba(111, 134, 255, 0.55); }
+.rail i.now { background: var(--accent); }
+.rail span { margin-left: 10px; min-width: 7ch; text-align: right; color: var(--muted); font: 500 12px var(--mono); font-variant-numeric: tabular-nums; }
+
+.scene { position: absolute; inset: 52px 0 108px 0; display: grid; place-items: center; padding: 18px 40px; }
+.caption { position: absolute; inset: auto 0 0 0; height: 108px; padding: 14px 40px 0; border-top: 1px solid var(--line); background: linear-gradient(180deg, rgba(15, 21, 33, 0.6), rgba(10, 14, 22, 0.95)); }
+.caption h2 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -0.01em; text-wrap: balance; }
+.caption h2 b { color: var(--accent); font-weight: 800; margin-right: 12px; font-variant-numeric: tabular-nums; }
+.caption p { margin: 6px 0 0; color: #b6c0d6; font-size: 17px; line-height: 1.35; max-width: 1200px; text-wrap: balance; }
+.caption code, .note code, .tip code, .embed code { font-family: var(--mono); font-size: 0.92em; color: var(--ink); background: rgba(255, 255, 255, 0.08); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+
+/* ---- mock windows ---- */
+.win { background: var(--panel); border: 1px solid rgba(255, 255, 255, 0.14); border-radius: 10px; overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; }
+.win-bar { height: 34px; flex: 0 0 auto; display: flex; align-items: center; gap: 7px; padding: 0 12px; background: var(--panel-2); border-bottom: 1px solid var(--line); color: var(--muted); font: 500 12px var(--mono); }
+.win-bar s { width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, 0.18); text-decoration: none; }
+.win-bar span { margin-left: 8px; }
+.win-body { flex: 1 1 auto; min-height: 0; position: relative; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; height: 100%; }
+.full { width: 100%; height: 100%; }
+
+/* browser */
+.addr { margin: 10px 14px; height: 30px; border-radius: 15px; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--line); display: flex; align-items: center; padding: 0 14px; font: 500 13px var(--mono); color: #cfd8ea; }
+.repo { padding: 6px 26px 0; }
+.repo-head { display: flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; }
+.repo-head em { font-style: normal; color: var(--muted); font-weight: 500; }
+.pill { font: 600 11px var(--font); color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; }
+.repo-desc { color: #aeb8cd; font-size: 14px; margin: 8px 0 14px; max-width: 720px; }
+.repo-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.branch { font: 500 12px var(--mono); color: #cfd8ea; border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+.code-btn { margin-left: auto; position: relative; font: 700 13px var(--font); color: #06120a; background: var(--ok); border-radius: 6px; padding: 7px 14px; }
+.code-menu { position: absolute; right: 0; top: 40px; width: 260px; background: #1a2333; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 8px; padding: 6px; box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5); color: var(--ink); font-weight: 500; opacity: 0; transform: translateY(-4px); transition: opacity 0.18s, transform 0.18s; z-index: 3; }
+.code-menu.open { opacity: 1; transform: none; }
+.code-menu div { padding: 8px 10px; border-radius: 5px; font-size: 13px; }
+.code-menu div.hot { background: rgba(111, 134, 255, 0.28); }
+.files { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.frow { display: flex; align-items: center; gap: 10px; padding: 8px 14px; font-size: 13.5px; border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.frow:first-child { border-top: 0; }
+.frow small { margin-left: auto; color: var(--muted); font-size: 12px; }
+.frow.sel { background: rgba(111, 134, 255, 0.18); outline: 1px solid rgba(111, 134, 255, 0.6); outline-offset: -1px; }
+.frow.new { animation: pop 0.5s ease both; background: rgba(127, 224, 162, 0.12); }
+.frow.dim { color: var(--muted); }
+@keyframes pop { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.ico { width: 18px; height: 14px; border-radius: 3px; background: #7f95ff; position: relative; flex: 0 0 auto; }
+.ico::before { content: ""; position: absolute; left: 0; top: -3px; width: 8px; height: 4px; border-radius: 2px 2px 0 0; background: #7f95ff; }
+.ico.file { width: 13px; height: 16px; background: #5c6780; border-radius: 2px; }
+.ico.file::before { display: none; }
+.ico.zip { background: var(--warn); }
+.dl { position: absolute; left: 20px; bottom: 16px; display: flex; align-items: center; gap: 10px; background: #1a2333; border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 8px; padding: 9px 14px; font-size: 13px; opacity: 0; transform: translateY(8px); transition: opacity 0.25s, transform 0.25s; }
+.dl.show { opacity: 1; transform: none; }
+.dl small { color: var(--muted); }
+
+.pane-title { padding: 10px 14px; font: 500 12px var(--mono); color: var(--muted); border-bottom: 1px solid var(--line); }
+.pane-title b { color: var(--ink); font-weight: 500; }
+.pane-list { padding: 8px; }
+.pane-list .frow { border: 0; border-radius: 6px; }
+.note { position: absolute; left: 14px; right: 14px; bottom: 12px; font-size: 13px; color: #b6c0d6; background: rgba(111, 134, 255, 0.1); border: 1px solid rgba(111, 134, 255, 0.3); border-radius: 8px; padding: 9px 12px; line-height: 1.4; }
+
+/* editor + console */
+.code { font: 400 14px/1.75 var(--mono); padding: 14px 18px; white-space: pre-wrap; word-break: break-word; }
+.code .ln { color: #5e6980; }
+.code .k { color: #9db0ff; }
+.code .s { color: var(--ok); }
+.code .c { color: #66738c; }
+.term { font: 400 13px/1.7 var(--mono); padding: 14px 18px; white-space: pre-wrap; word-break: break-word; color: #cdd6e8; }
+.term .p { color: #66738c; }
+.term .hi { color: var(--ok); }
+.term .cmd { color: var(--ink); font-weight: 700; }
+.term .w { color: var(--warn); }
+.term .nw { white-space: nowrap; }
+.term.sm { font-size: 12px; line-height: 1.6; }   /* the narrower console of "Add your clothing": every line it prints has to fit */
+.caret { display: inline-block; width: 8px; height: 1.05em; background: var(--accent); vertical-align: text-bottom; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.tips { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.tip { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; background: rgba(255, 255, 255, 0.03); font-size: 13.5px; line-height: 1.45; color: #b6c0d6; opacity: 0.25; transition: opacity 0.3s, border-color 0.3s; }
+.tip.on { opacity: 1; border-color: rgba(111, 134, 255, 0.55); }
+.tip h4 { margin: 0 0 4px; font-size: 13px; color: var(--ink); }
+
+/* chat */
+.chat { padding: 16px 20px; display: flex; gap: 14px; }
+/* A plain circle: the product sends a name with the message, no picture (webhook-delivery.js), so the avatar is whatever the owner gave the webhook. */
+.avatar { width: 42px; height: 42px; border-radius: 50%; background: #3b4560; flex: 0 0 auto; }
+.who { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.who .app { font: 700 10px var(--font); background: var(--accent); color: #fff; border-radius: 4px; padding: 2px 5px; }
+.who time { color: var(--muted); font-weight: 400; font-size: 12px; }
+/* Laid out the way Discord draws this message: title, link, fields, then the embed's image, then the footer with its time. */
+.embed { margin-top: 8px; border: 1px solid rgba(255, 255, 255, 0.1); border-left: 4px solid #4b66ff; border-radius: 6px; background: #121926; padding: 12px 16px 12px 14px; max-width: 820px; }
+.embed h3 { margin: 0; font-size: 16px; color: #8ea2ff; }
+.embed .lnk { color: #8ea2ff; font-weight: 700; font-size: 14px; margin: 4px 0 6px; display: inline-block; border-radius: 4px; padding: 1px 4px; margin-left: -4px; }
+.embed .lnk.hot { background: rgba(111, 134, 255, 0.28); }
+.embed dl { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; font-size: 13px; }
+.embed dt { font-weight: 700; color: var(--ink); }
+.embed dd { margin: 2px 0 0; color: #c4cde0; line-height: 1.4; }
+.embed .wide { grid-column: 1 / -1; }
+.embed .shot { display: block; width: 190px; height: 190px; margin-top: 10px; border-radius: 6px; background: #484e5c; object-fit: contain; }
+.embed footer { color: var(--muted); font-size: 11.5px; margin-top: 8px; }
+.dl.top { left: auto; bottom: auto; right: 20px; top: 14px; }
+
+/* title + end */
+.hero { text-align: center; display: grid; gap: 14px; justify-items: center; }
+.hero img.mark { width: 120px; height: 120px; object-fit: contain; }
+.hero h1 { margin: 0; font-size: 64px; font-weight: 800; letter-spacing: -0.03em; }
+.hero p { margin: 0; color: #b6c0d6; font-size: 20px; }
+.hero p.need { font-size: 15px; color: var(--muted); max-width: 860px; text-wrap: balance; }
+.steps { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; max-width: 1000px; }
+.steps span { font: 500 13px var(--font); color: #cfd8ea; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; }
+.steps span b { color: var(--accent); margin-right: 6px; }
+.end { display: grid; grid-template-columns: auto 1fr; gap: 40px; align-items: center; }
+.end img.worn { width: 380px; height: 380px; object-fit: contain; filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.6)); }
+.end h1 { margin: 0 0 10px; font-size: 54px; font-weight: 800; letter-spacing: -0.03em; }
+.end .url { font: 700 22px var(--mono); color: var(--accent); margin-top: 18px; }
+.end p { margin: 0; color: #b6c0d6; font-size: 19px; line-height: 1.45; max-width: 520px; }
+
+/* in-game */
+.game { width: 100%; height: 100%; border-radius: 10px; border: 1px solid var(--line); background: radial-gradient(circle at 50% 35%, #1b2740, #080b12 70%); position: relative; overflow: hidden; }
+.chatbox { position: absolute; left: 28px; top: 26px; width: 420px; font: 500 15px var(--font); background: rgba(0, 0, 0, 0.55); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; padding: 9px 12px; }
+.designer-fit { position: absolute; inset: 0; display: grid; place-items: center; opacity: 0; transition: opacity 0.35s; }
+.designer-fit.show { opacity: 1; }
+.designer-box { position: relative; overflow: hidden; border-radius: 6px; }
+.designer-host { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+
+/* cursor */
+.cursor { position: absolute; left: 0; top: 0; width: 22px; height: 22px; z-index: 50; pointer-events: none; opacity: 0; transition: opacity 0.2s; will-change: transform; }
+.cursor.show { opacity: 1; }
+.cursor svg { display: block; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.6)); }
+.cursor i { position: absolute; left: -9px; top: -9px; width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; }
+.cursor.click i { animation: ring 0.45s ease-out; }
+@keyframes ring { from { opacity: 0.9; transform: scale(0.4); } to { opacity: 0; transform: scale(1.5); } }
+.fly { position: absolute; z-index: 40; display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 6px; background: #22304d; border: 1px solid rgba(111, 134, 255, 0.7); font-size: 13.5px; pointer-events: none; transition: transform 0.9s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s; }
+
+/* ---- page controls ---- */
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.controls button { font: 600 13px var(--font); color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; padding: 9px 14px; cursor: pointer; }
+.controls button:hover { border-color: rgba(255, 255, 255, 0.28); }
+.controls button.primary { background: var(--accent-fill); border-color: var(--accent-fill); color: #fff; min-width: 96px; }
+.dots { display: flex; gap: 6px; margin-inline: 6px; flex-wrap: wrap; }
+.dots button { width: 30px; height: 30px; padding: 0; border-radius: 50%; font-variant-numeric: tabular-nums; }
+.dots button.now { background: var(--accent-fill); border-color: var(--accent-fill); color: #fff; }
+.controls .spacer { flex: 1 1 auto; }
+/* The key hint is part of the button row. It is a line of its own under the
+   buttons, except where the row has room for it (the script sets is-roomy):
+   there it sits in the row, so it costs the stage no height. */
+.hint { order: 1; flex: 0 0 100%; color: var(--muted); font-size: 13px; line-height: 1.5; margin: 2px 0 0; }
+.player.is-roomy .hint { order: 0; flex: 0 1 auto; margin: 0 0 0 10px; white-space: nowrap; }
+.hint kbd { font: 500 12px var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; color: var(--ink); }
+@media (hover: none) and (pointer: coarse) { .hint { display: none; } }      /* no keyboard to press */
+
+/* The current screen in words, shown when the stage is too small to read (the script sets is-small). */
+.player-now { display: none; }
+.player.is-small .player-now { display: block; }
+.player-now-count { margin: 0; color: var(--muted); font: 500 12px/1.5 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.player-now-title { margin: 2px 0 4px; font-size: 20px; line-height: 1.3; font-weight: 800; letter-spacing: -0.01em; }
+.player-now-text { margin: 0; color: var(--soft); font-size: 16px; line-height: 1.5; }
+.player-now code, .step-list code { font-family: var(--mono); font-size: 0.92em; color: var(--ink); background: rgba(255, 255, 255, 0.08); padding: 1px 6px; border-radius: 4px; overflow-wrap: anywhere; }
+/* What a screen says besides its caption, under the stage and in the list
+   below: lines to copy (they scroll sideways on a narrow screen instead of
+   breaking, so a line stays a line) and the screen's note. */
+.step-lines { margin: 10px 0 0; padding: 10px 12px; max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: rgba(0, 0, 0, 0.28); color: var(--ink); font: 400 13px/1.7 var(--mono); white-space: pre; tab-size: 4; }
+.player-now .step-lines code, .step-list .step-lines code { font: inherit; color: inherit; background: none; padding: 0; border-radius: 0; overflow-wrap: normal; }
+.step-note { margin: 10px 0 0; padding: 8px 12px; border: 1px solid rgba(111, 134, 255, 0.3); border-radius: 8px; background: rgba(111, 134, 255, 0.1); color: #c9d2e6; font-size: 14px; line-height: 1.5; }
+
+/* The script measures the stage and says how the buttons are laid out.
+   is-tight: the one row no longer fits as it is, so it is drawn a little closer.
+   is-stacked: a small window, a zoomed page or a finger: three rows of
+   buttons, each at least 40px to the touch. */
+.player.is-tight .controls { gap: 6px; }
+.player.is-tight .controls button { padding: 9px 10px; }
+.player.is-tight .controls button.primary { min-width: 76px; }
+.player.is-tight .dots { gap: 4px; margin-inline: 2px; }
+.player.is-tight .dots button { width: 28px; height: 28px; padding: 0; }
+.player.is-stacked .controls { gap: 6px; }
+.player.is-stacked .controls > button { flex: 1 1 0; min-width: 0; min-height: 44px; }
+.player.is-stacked .controls .spacer { display: none; }
+.player.is-stacked .dots { flex: 1 1 100%; margin-inline: 0; display: grid; grid-template-columns: repeat(10, 1fr); }
+.player.is-stacked .dots button { width: auto; height: 40px; border-radius: 20px; }
+@media (max-width: 520px) { .player.is-stacked .dots { grid-template-columns: repeat(5, 1fr); } }
+@media (pointer: coarse) {
+    .controls button { min-height: 40px; }
+    .dots button { width: 40px; height: 40px; }
+}
+
+/* ---- the screens in words ---- */
+/* The list is plain text as it is written; the player turns each heading into
+   a link to its screen when it starts. Cards of at least 320px, as many to a
+   row as fit, each row filled to its end; a screen with lines to copy takes
+   a whole row, so its lines can be read without scrolling them. */
+.step-section { margin-top: 40px; }
+.step-section h2 { margin: 0; font-size: 20px; line-height: 1.3; font-weight: 800; letter-spacing: -0.01em; }
+.step-intro { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.step-list { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 12px; }
+.step-list li { flex: 1 1 320px; min-width: 0; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); padding: 6px 16px 16px; }
+.step-list li.step-wide { flex-basis: 100%; }
+.step-list li.is-current { border-color: rgba(111, 134, 255, 0.65); }
+.step-list h3 { margin: 0; font-size: 16px; line-height: 1.35; font-weight: 700; }
+.step-list h3, .step-list a { display: flex; align-items: center; gap: 10px; min-height: 44px; }
+.step-list a { flex: 1 1 auto; color: var(--ink); text-decoration: none; border-radius: 6px; }
+.step-list a:hover .step-name { text-decoration: underline; text-underline-offset: 3px; }
+.step-number { flex: 0 0 auto; min-width: 1.5em; color: var(--link); font-variant-numeric: tabular-nums; }
+.step-list p { margin: 0; color: var(--soft); font-size: 15px; line-height: 1.5; }
+.step-list p.step-note { margin-top: 10px; color: #c9d2e6; font-size: 14px; }
+.step-more { margin: 20px 0 0; color: var(--muted); font-size: 14px; }
+.step-more a { color: var(--link); text-underline-offset: 3px; }
+@media (pointer: coarse) { .step-more a { padding-block: 12px; } }      /* a link in a sentence: room for a finger, without moving the lines */
+
+/* ---- ?embed=1: the stage and one compact row of buttons, for an iframe ---- */
+/* The player fits itself into the frame, whatever its shape: the buttons keep
+   their row and the script gives the stage the width that the height left
+   above them allows. The step dots are left out where the row has no room for
+   them (is-nodots, set by the script): Back and Next do the same. */
+/* "light dark" lets the frame take the embedding page's scheme, which is what keeps its background see-through. */
+html.is-embed { color-scheme: light dark; }
+html.is-embed, .is-embed body { background: transparent; }
+.is-embed .site-header, .is-embed .page-head, .is-embed .nojs-note, .is-embed .hint, .is-embed .player .player-now, .is-embed .step-section { display: none; }
+.is-embed .page { padding: 0; }
+.is-embed .page-col { width: auto; margin: 0; }
+.is-embed .player { gap: 8px; }
+.is-embed .stage-wrap { margin-inline: auto; }
+.is-embed .controls { gap: 6px; }
+.is-embed .player.is-nodots .dots, .is-embed .player.is-nodots .controls .spacer { display: none; }
+.is-embed .player.is-nodots .controls > button { flex: 1 1 auto; min-width: 0; padding-inline: 6px; }
+@media (pointer: fine) {
+    .is-embed .controls button { padding: 6px 10px; }
+    .is-embed .dots { gap: 4px; margin-inline: 2px; }
+    .is-embed .dots button { width: 26px; height: 26px; padding: 0; }
+}
+
+/* ---- the recording view (?record=1, key H): the stage alone, filling the window ---- */
+body.recording .site-header, body.recording .page-head, body.recording .nojs-note, body.recording .controls, body.recording .hint, body.recording .player .player-now, body.recording .step-section { display: none; }
+body.recording .page { padding: 0; }
+body.recording .page-col { width: auto; margin: 0; }
+body.recording .player { min-height: 100vh; justify-content: center; }
+body.recording .stage-wrap { border: 0; border-radius: 0; width: min(100vw, calc(100vh * 16 / 9)); margin-inline: auto; }
+body.recording, body.recording * { cursor: none; }   /* the real pointer must not sit in the footage next to the drawn one */
+body.recording .stage::after { content: ""; position: absolute; inset: 0; z-index: 60; cursor: none; }   /* also over the designer, whose own styles give its buttons a pointer */
+
+
+@media (prefers-reduced-motion: reduce) { .caret, .frow.new, .cursor.click i { animation: none; } .fly, .code-menu, .dl, .designer-fit, .tip { transition: none; } }
+</style>
+<!-- ==========================================================================
+     PAGE CHROME: start
+     The header of this page and its styles: everything about the page that
+     is not the walkthrough. It is interim. When the documentation site is
+     built around this page, this whole block (down to "PAGE CHROME: end") is
+     what the shared site header replaces.
+     ========================================================================== -->
+<style>
+.site-header { border-bottom: 1px solid var(--line); }
+.site-header .page-col { display: flex; flex-wrap: wrap; align-items: center; gap: 0 20px; min-height: 56px; }
+.site-brand { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; color: var(--ink); font-size: 16px; font-weight: 800; letter-spacing: 0.01em; text-decoration: none; border-radius: 6px; }
+.site-brand img { display: block; width: 28px; height: 28px; object-fit: contain; }
+.site-nav { margin-left: auto; display: flex; gap: 2px; }
+.site-nav a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; color: #c9d2e6; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 7px; }
+.site-nav a:hover { color: var(--ink); background: rgba(255, 255, 255, 0.06); }
+@media (max-width: 400px) { .site-nav a { padding: 0 8px; } }
+</style>
+</head>
+<body>
+<header class="site-header">
+    <div class="page-col">
+        <a class="site-brand" href="../"><img src="../assets/logo.png" alt="" width="28" height="28"><span>cr-clothes</span></a>
+        <nav class="site-nav" aria-label="Site">
+            <a href="{{ADMIN_GUIDE_URL}}">Admin guide</a>
+            <a href="{{REPO_URL}}">GitHub</a>
+        </nav>
+    </div>
+</header>
+<script>
+/* Opened from a folder on disk, a link to "../" would list the folder: name the page. */
+if (location.protocol === 'file:') document.querySelector('.site-brand').setAttribute('href', '../index.html');
+</script>
+<!-- ==========================================================================
+     PAGE CHROME: end
+     ========================================================================== -->
+
+<main class="page" id="main">
+    <div class="page-col">
+        <div class="page-head">
+            <h1>First-install walkthrough</h1>
+            <p>From downloading cr-clothes to installing your first exported design, one screen at a time.</p>
+        </div>
+        <p class="nojs-note">The animated version of this walkthrough needs JavaScript. Its ten screens are written out below.</p>
+
+        <section class="player" id="player" aria-label="Animated walkthrough">
+            <!-- The stage is a picture: mock screens that draw themselves. It is hidden
+                 from screen readers and cannot take focus; what it says is in the
+                 list further down, written from the same words. -->
+            <div class="stage-wrap" id="wrap" tabindex="-1" role="img" aria-label="Animation of the walkthrough. Its screens are written out below the player.">
+                <div class="stage" id="stage" aria-hidden="true" inert>
+                    <div class="topbar">
+                        <img id="topLogo" alt="" src="../assets/logo.png">
+                        <span class="name">cr-clothes</span>
+                        <span class="what">First install</span>
+                        <div class="rail" id="rail"></div>
+                    </div>
+                    <div class="scene" id="scene"></div>
+                    <div class="caption"><h2 id="capTitle"></h2><p id="capSub"></p></div>
+                    <div class="cursor" id="cursor"><i></i><svg width="22" height="22" viewBox="0 0 22 22"><path d="M3 2 L3 18 L7.5 14 L10.5 20.5 L13.5 19 L10.5 12.8 L17 12.5 Z" fill="#ffffff" stroke="#0a0e16" stroke-width="1.4" stroke-linejoin="round"/></svg></div>
+                </div>
+            </div>
+
+            <div class="controls" role="group" aria-label="Walkthrough controls">
+                <button id="btnPrev" type="button">Back</button>
+                <button id="btnPlay" type="button" class="primary">Play</button>
+                <button id="btnNext" type="button">Next</button>
+                <div class="dots" id="dots" role="group" aria-label="Screens"></div>
+                <p class="hint">Press <kbd>Space</kbd> to play or pause, <kbd>←</kbd> <kbd>→</kbd> to step.</p>
+                <span class="spacer"></span>
+                <button id="btnRestart" type="button">Start over</button>
+                <button id="btnFullscreen" type="button" hidden>Fullscreen</button>
+            </div>
+            <div class="player-now" id="now">
+                <p class="player-now-count" id="nowCount"></p>
+                <p class="player-now-title" id="nowTitle"></p>
+                <p class="player-now-text" id="nowText"></p>
+                <pre class="step-lines" id="nowLines" tabindex="0" hidden><code></code></pre>
+                <p class="step-note" id="nowNote" hidden></p>
+            </div>
+            <p class="sr-only" id="status" role="status"></p>
+        </section>
+
+        <!-- Written by the build from site/walkthrough/steps.js, the same words
+             the player shows. This is the walkthrough for anyone without the
+             animation: scripts off, a screen reader, a search engine. The first
+             entry is the title screen; the steps are numbered as on the stage. -->
+        <section class="step-section" aria-labelledby="stepsHeading">
+            <h2 id="stepsHeading">The ten screens</h2>
+            <p class="step-intro js-only">Pick a screen to show it in the player.</p>
+            <ol class="step-list" id="stepList" role="list">
+{{STEP_LIST}}
+            </ol>
+            <p class="step-more">Delivery options, permissions, hosted servers, troubleshooting and the known limits are in the <a href="{{ADMIN_GUIDE_URL}}">admin guide</a>.</p>
+        </section>
+    </div>
+</main>
+
+<script>
+const TUT = /*__DATA__*/{};
+
+// The player. If setting it up fails (a browser this was not written for),
+// the page falls back to what it is without scripts: the note and the written
+// screens instead of an empty stage. Only a failure of the player's own
+// set-up does that. An error somewhere else in the page (a browser
+// extension's script, say) has nothing to do with whether the player works.
+try {
+    walkthroughPlayer();
+} catch (error) {
+    document.documentElement.className = 'no-js';
+    throw error;
+}
+
+function walkthroughPlayer() {
+    'use strict';
+    const $ = (sel, root) => (root || document).querySelector(sel);
+    const html = document.documentElement;
+    if (!html.classList.contains('js')) return;       // the script in the head found this browser too old for the player: the page stays the written screens
+    const stage = $('#stage'), wrap = $('#wrap'), sceneEl = $('#scene'), cursor = $('#cursor'), player = $('#player'), controls = $('.controls');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    const query = new URLSearchParams(location.search);
+    const embedded = html.classList.contains('is-embed');
+    let scale = 1;
+    let booted = false;         // the stage has been drawn for the first time
+
+    const fullscreenElement = () => document.fullscreenElement || document.webkitFullscreenElement || null;
+    function fit() {
+        // In the page the stage's box is 16:9 and the stage fills it. A full
+        // screen has whatever shape the screen has: fit inside it and centre.
+        const full = fullscreenElement() === wrap;
+        if (embedded) fitFrame();
+        scale = full ? Math.min(wrap.clientWidth / 1280, wrap.clientHeight / 720) : wrap.clientWidth / 1280;
+        stage.style.left = full ? ((wrap.clientWidth - 1280 * scale) / 2) + 'px' : '';
+        stage.style.top = full ? ((wrap.clientHeight - 720 * scale) / 2) + 'px' : '';
+        stage.style.transform = 'scale(' + scale + ')';
+        if (embedded) return;
+        // Under 900px the caption on the stage is smaller than 12px: the
+        // page then repeats it under the stage at reading size (.player-now).
+        const width = wrap.offsetWidth;
+        player.classList.toggle('is-small', !full && width < 900);
+        // The buttons: one row while it fits (drawn closer under 880px), three
+        // rows of large buttons below that. A finger gets the large buttons sooner.
+        const stacked = width < (coarse ? 880 : 760);
+        player.classList.toggle('is-stacked', !full && stacked);
+        player.classList.toggle('is-tight', !full && !stacked && width < 880);
+        // From 1200px on the key hint has room inside the row.
+        player.classList.toggle('is-roomy', !full && width >= 1200);
+    }
+    // In a frame (?embed=1) the player fits itself into the frame: the buttons
+    // in one row and the stage as wide as the height above them allows.
+    // Everything here follows from the frame's own width and height, never
+    // from the stage's size, so one pass settles it.
+    function fitFrame() {
+        // With the step dots if the row has room for them, without if not.
+        player.classList.add('is-nodots');
+        const bare = controls.offsetHeight;
+        player.classList.remove('is-nodots');
+        if (controls.offsetHeight > bare) player.classList.add('is-nodots');
+        const gap = parseFloat(getComputedStyle(player).rowGap) || 0;
+        const room = window.innerHeight - controls.offsetHeight - gap;
+        wrap.style.width = Math.max(0, Math.min(html.clientWidth, Math.floor(room * 16 / 9))) + 'px';
+    }
+    new ResizeObserver(fit).observe(wrap);
+    if (embedded) window.addEventListener('resize', fit);
+    fit();
+
+    // ------------------------------------------------------------ real values
+    const ID = '3f9a1c0b7e2d';
+    const GARMENT = 'Female Mypack top 000';
+    const COLLECTION = 'mp_f_freemode_01_mp_f_mypack';
+    const OWN_PACK = 'my-clothing-pack';      // the owner's own clothing pack: no spaces, so "ensure my-clothing-pack" names it
+    const EXPORT_NAME = GARMENT + ' variant 0';
+    const PACK = 'cd_female_mypack_top_000_variant_0_' + ID;
+    const DLC = 'mp_f_cd_' + ID;
+    const READY = (garments, exportable) => '[cr-clothes] v1.1.0 ready | garments: ' + garments + ' (' + exportable + ' exportable) | delivery: Discord webhook | design rights: grants (oxmysql) | framework: qb | packs: /tmp/clothdesigner';
+    // The pack of this very design on this garment is 233,769 bytes: "228 KB" in game, "0.22 MB" in Discord.
+    const EXPORT_MESSAGE = "Created pack '" + PACK + "' (228 KB). Its download link is sent to Discord (clothbake_get in the server console prints it too); extract into resources/, add 'ensure " + PACK + "', then restart. It adds the clothing collection '" + DLC + "'. Each installed pack uses one clothing collection slot, and a server only has a few. Restart required for streamed clothing.";
+    // FXServer puts the channel in front of every console line: 20 characters, right-aligned, in brackets.
+    const channel = name => '<span class="p">[' + name.padStart(20) + ']</span> ';
+    const SCRIPT = channel('script:cr-clothes'), RESOURCES = channel('resources'), CORE = channel('c-scripting-core');
+    const dim = text => '<span class="p">' + text + '</span>';
+
+    // ------------------------------------------------------------ run control
+    let runId = 0, instant = false, playing = false, current = 0;
+    class Cancelled extends Error {}
+    function guard(id) { if (id !== runId) throw new Cancelled(); }
+    function sleep(ms, id) {
+        guard(id);
+        // Reduced motion drops the movement, never the time: the timeline keeps its length.
+        if (instant) return Promise.resolve();
+        return new Promise(resolve => setTimeout(resolve, ms)).then(() => guard(id));
+    }
+    async function type(el, text, id, speed) {
+        guard(id);
+        if (instant) { el.textContent += text; return; }
+        if (reduced) { el.textContent += text; await sleep(text.length * (speed || 22), id); return; }
+        const caret = document.createElement('span');
+        caret.className = 'caret';
+        el.after(caret);
+        try {
+            for (const ch of text) { el.textContent += ch; await sleep(speed || 22, id); }
+        } finally { caret.remove(); }
+    }
+    function esc(text) { return String(text).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+    function point(el, fx, fy) {
+        const s = stage.getBoundingClientRect(), r = el.getBoundingClientRect();
+        return { x: (r.left - s.left + r.width * (fx == null ? 0.5 : fx)) / scale, y: (r.top - s.top + r.height * (fy == null ? 0.5 : fy)) / scale };
+    }
+    async function moveTo(el, id, opts) {
+        guard(id);
+        const o = opts || {};
+        const p = point(el, o.fx, o.fy);
+        cursor.classList.add('show');
+        cursor.style.transition = (instant || reduced) ? 'none' : 'transform ' + (o.ms || 700) + 'ms cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s';
+        cursor.style.transform = 'translate(' + p.x + 'px,' + p.y + 'px)';
+        await sleep((o.ms || 700) + 80, id);
+    }
+    async function click(id, wait) {
+        guard(id);
+        cursor.classList.remove('click');
+        void cursor.offsetWidth;
+        cursor.classList.add('click');
+        await sleep(wait || 320, id);
+    }
+    function parkCursor() { cursor.classList.remove('show', 'click'); cursor.style.transition = 'none'; cursor.style.transform = 'translate(1100px, 640px)'; }
+
+    const win = (title, body, cls) => '<div class="win ' + (cls || 'full') + '"><div class="win-bar"><s></s><s></s><s></s><span>' + title + '</span></div><div class="win-body">' + body + '</div></div>';
+    const folder = (name, extra, cls) => '<div class="frow ' + (cls || '') + '"><span class="ico"></span>' + name + (extra ? '<small>' + extra + '</small>' : '') + '</div>';
+    const file = (name, extra, cls) => '<div class="frow ' + (cls || '') + '"><span class="ico file"></span>' + name + (extra ? '<small>' + extra + '</small>' : '') + '</div>';
+
+    // The chip rides under the cursor: same start point, end point, curve and
+    // duration as the moveTo() it is paired with.
+    async function fly(fromEl, toEl, label, id, opts) {
+        guard(id);
+        const o = opts || {};
+        const ms = o.ms || 900;
+        if (instant || reduced) return;
+        const a = point(fromEl, o.fromFx, o.fromFy), b = point(toEl, o.toFx, o.toFy);
+        const chip = document.createElement('div');
+        chip.className = 'fly';
+        chip.innerHTML = '<span class="ico"></span>' + label;
+        chip.style.left = (a.x - 22) + 'px';
+        chip.style.top = (a.y - 17) + 'px';
+        chip.style.transitionDuration = ms + 'ms, 0.3s';
+        stage.appendChild(chip);
+        try {
+            void chip.offsetWidth;
+            chip.style.transform = 'translate(' + (b.x - a.x) + 'px,' + (b.y - a.y) + 'px)';
+            await sleep(ms + 80, id);
+        } finally { chip.remove(); }
+    }
+
+    // ------------------------------------------------------------ the designer, from the real markup
+    function mountDesigner(box) {
+        const VW = 1440, VH = 810;
+        const k = Math.min(box.clientWidth / VW, box.clientHeight / VH);
+        const frame = document.createElement('div');
+        frame.className = 'designer-box';
+        frame.style.width = Math.floor(VW * k) + 'px';
+        frame.style.height = Math.floor(VH * k) + 'px';
+        const host = document.createElement('div');
+        host.className = 'designer-host';
+        host.style.width = VW + 'px';
+        host.style.height = VH + 'px';
+        host.style.transform = 'scale(' + k + ')';
+        frame.appendChild(host);
+        box.appendChild(frame);
+
+        const root = host.attachShadow({ mode: 'open' });
+        // The host stands in for the product's own page, which sets no text colour,
+        // no colour scheme and ships no Inter: black default text, light controls,
+        // the system font. Sizes the product gives in vh are given in px of the
+        // 810px-tall designer, or they would follow the browser window.
+        root.innerHTML = '<style>' + TUT.designerCss + '</style>'
+            + '<style>:host{display:block;color:#000;color-scheme:light;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#05070c}'
+            + '.app{position:absolute!important;inset:0}#garmentPreviewCanvas,#garmentPreviewFallback{display:none!important}'
+            + '.tut-preview{position:absolute;inset:0;margin:auto;max-width:84%;max-height:84%;object-fit:contain;z-index:2;filter:drop-shadow(0 24px 40px rgba(0,0,0,.55))}'
+            + '#garmentPreviewViewport{position:relative}'
+            + '#designerCanvas{width:min(100%,' + (VH * 0.68) + 'px)}</style>'
+            + TUT.designerHtml;
+        const q = sel => root.querySelector(sel);
+        const set = (sel, text) => { const el = q(sel); if (el) el.textContent = text; };
+        const paint = (sel, src, resize) => {
+            const canvas = q(sel);
+            if (!canvas || !src) return;
+            const img = new Image();
+            img.onload = () => {
+                if (resize) { canvas.width = img.naturalWidth; canvas.height = img.naturalHeight; }
+                canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+            };
+            img.src = src;
+        };
+
+        // ---- the editor, as web/designer.js fills it for this garment and design.
+        // The fill layer is the selected one: that is the state in which the
+        // footer reads NO LAYER SELECTED and the Garment color field is shown.
+        const select = q('#garmentSelect');
+        if (select) {
+            select.innerHTML = '';
+            const group = document.createElement('optgroup'); group.label = 'Female — Clothing';
+            const option = document.createElement('option'); option.textContent = GARMENT;
+            group.appendChild(option); select.appendChild(group);
+        }
+        set('#activeGarmentLabel', GARMENT);
+        set('#garmentMeta', COLLECTION + ' · drawable 0 · component');
+        set('#garmentCountPill', '1 GARMENT');
+        set('#previewGarmentType', 'LIVE 3D PREVIEW');
+        set('#coordinates', 'NO LAYER SELECTED');
+        set('#layerCount', '2');
+        set('#status', 'Designing ' + GARMENT + '.');
+        const swatch = q('#fillSwatch');
+        if (swatch) swatch.style.background = '#1d3a8a';
+        const colour = q('#background');
+        if (colour) colour.value = '#1d3a8a';
+        const fillRow = q('#fillLayerRow');
+        if (fillRow) fillRow.classList.add('is-selected');
+        const layers = q('#layerList');
+        if (layers) layers.innerHTML = '<div class="layer-row" tabindex="0" role="button"><span class="layer-icon">▧</span><span><strong>logo.png</strong><small>Image layer · right-click in list or canvas</small></span><button class="layer-delete" type="button" aria-label="Delete">×</button></div>';
+
+        const viewport = q('#garmentPreviewViewport');
+        if (viewport) { const img = document.createElement('img'); img.className = 'tut-preview'; img.alt = ''; img.src = TUT.preview; viewport.appendChild(img); }
+        const texture = new Image();
+        texture.onload = () => {
+            for (const sel of ['#designerCanvas', '#designThumb']) {
+                const canvas = q(sel);
+                if (canvas) canvas.getContext('2d').drawImage(texture, 0, 0, canvas.width, canvas.height);
+            }
+            // UV GUIDE ON: the product draws the garment's own guide over the
+            // texture at 0.9 opacity; the thumbnail is copied before it.
+            if (!TUT.uvGuide) return;
+            const guide = new Image();
+            guide.onload = () => {
+                const canvas = q('#designerCanvas');
+                if (!canvas) return;
+                const c = canvas.getContext('2d');
+                c.globalAlpha = 0.9;
+                c.drawImage(guide, 0, 0, canvas.width, canvas.height);
+                c.globalAlpha = 1;
+            };
+            guide.src = TUT.uvGuide;
+        };
+        texture.src = TUT.texture;
+        if (!TUT.uvGuide) {
+            // No guide picture in this build: show the button the way it reads when the guide is off.
+            const uv = q('#toggleUvGuide');
+            if (uv) { uv.textContent = 'UV GUIDE OFF'; uv.classList.remove('is-active'); }
+        }
+
+        // ---- the Garment Browser, as openPreparedGarmentBrowser() fills it when
+        // this one garment is installed. Its two pictures are the product's own renders.
+        root.querySelectorAll('#browserGenderSwitch .browser-toggle').forEach(button => {
+            const female = button.dataset.gender === 'female';
+            button.disabled = !female;
+            button.classList.toggle('is-active', female);
+        });
+        const gender = q('#browserGender');
+        if (gender) gender.value = 'female';
+        const tabs = q('#browserCategoryTabs');
+        if (tabs) tabs.innerHTML = '<button type="button" class="browser-category-tab is-active" data-category="tops">Tops</button>';
+        set('#browserGridCount', '1 item');
+        set('#browserCounter', '1 / 1');
+        const grid = q('#browserGrid');
+        if (grid) grid.innerHTML = '<button type="button" class="prepared-garment-card is-active"> <canvas id="prepared-thumb-0" class="prepared-card-canvas" width="320" height="240"></canvas> <div class="prepared-card-copy"> <strong>' + GARMENT + '</strong> <small>Tops · drawable 0</small> </div></button>';
+        set('#browserDetailTitle', GARMENT);
+        set('#browserDetailSubtitle', 'Female · Tops');
+        set('#browserStatModel', 'jbib_000_u.ydd');
+        set('#browserStatCollection', COLLECTION);
+        set('#browserStatDrawable', '0');
+        set('#browserSlotCount', '3 slots');
+        const slots = q('#browserSlotGrid');
+        if (slots) slots.innerHTML = '<button type="button" class="prepared-slot is-active">01</button><button type="button" class="prepared-slot">02</button><button type="button" class="prepared-slot">03</button>';
+        paint('#browserPreviewCanvas', TUT.browserMain, true);
+        paint('#prepared-thumb-0', TUT.browserThumb, false);
+
+        const editor = q('#designerStudio'), browser = q('#builderStudio');
+        const view = name => {
+            if (!editor || !browser) return;
+            editor.classList.toggle('is-hidden', name !== 'editor');
+            browser.classList.toggle('is-hidden', name !== 'browser');
+        };
+        // Only when the whole browser is there (its details panel and both pictures).
+        const hasBrowser = Boolean(editor && browser && q('#browserSelect') && TUT.browserMain && TUT.browserThumb);
+        // The designer here is a picture of the designer. The stage is inert, so
+        // none of its controls can be reached; this says the same to a browser
+        // that does not know the inert attribute yet.
+        root.querySelectorAll('a[href], button, input, select, textarea, [tabindex], [contenteditable]').forEach(el => { el.tabIndex = -1; });
+        return { q, set, view, hasBrowser };
+    }
+
+    // ------------------------------------------------------------ scenes
+    const scenes = [
+        {
+            id: 'title',
+            hold: 4500,
+            async play() {
+                sceneEl.innerHTML = '<div class="hero"><img class="mark" alt="" src="' + TUT.logo + '"><h1>cr-clothes</h1><p>Custom clothing designed in game, baked on your own server.</p>'
+                    + '<div class="steps"><span><b>1</b>Download</span><span><b>2</b>Drop it in</span><span><b>3</b>server.cfg</span><span><b>4</b>Start</span><span><b>5</b>Add clothing</span><span><b>6</b>Design</span><span><b>7</b>Get the pack</span><span><b>8</b>Install it</span><span><b>9</b>Wear it</span></div>'
+                    + '<p class="need">You need a recent FiveM server artifact, a clothing pack you own, and the Cfx.re “Stream Custom Clothing” entitlement on your server key.</p></div>';
+            }
+        },
+        {
+            id: 'download',
+            hold: 3500,
+            async play(id) {
+                sceneEl.innerHTML = win('Browser', '<div class="addr">github.com/cody-raves/cr-clothes</div><div class="repo">'
+                    + '<div class="repo-head"><em>cody-raves /</em> cr-clothes <span class="pill">Public</span></div>'
+                    + '<p class="repo-desc">In-game clothing designer for FiveM: design on the real UV map, baked on your own server, delivered to your Discord. Free, open source, self-contained.</p>'
+                    + '<div class="repo-bar"><span class="branch">main</span><span class="code-btn" id="codeBtn">Code<div class="code-menu" id="codeMenu"><div>Clone</div><div id="zipRow">Download ZIP</div></div></span></div>'
+                    + '<div class="files">' + folder('clothdesigner-bot') + folder('cr-clothes') + folder('docs') + folder('site') + file('.gitignore') + file('LICENSE') + file('README.md') + '</div></div>'
+                    + '<div class="dl" id="dl"><span class="ico zip"></span>cr-clothes-main.zip <small>Completed</small></div>');
+                await sleep(500, id);
+                await moveTo($('#codeBtn'), id, { fx: 0.3 });
+                await click(id);
+                $('#codeMenu').classList.add('open');
+                await sleep(450, id);
+                await moveTo($('#zipRow'), id, { ms: 450, fx: 0.4 });
+                $('#zipRow').classList.add('hot');
+                await click(id);
+                $('#codeMenu').classList.remove('open');
+                $('#dl').classList.add('show');
+            }
+        },
+        {
+            id: 'drop-it-in',
+            hold: 5000,
+            async play(id) {
+                sceneEl.innerHTML = '<div class="row2">'
+                    + win('Downloads', '<div class="pane-title">Downloads › <b>cr-clothes-main</b></div><div class="pane-list">' + folder('clothdesigner-bot', 'optional Discord bot', 'dim') + folder('cr-clothes', 'the resource', 'sel') + folder('docs', 'the admin guide', 'dim') + folder('site', 'source of the project site', 'dim') + file('.gitignore', '', 'dim') + file('LICENSE', '', 'dim') + file('README.md', '', 'dim') + '</div>', 'full')
+                    + win('Your server', '<div class="pane-title">server › <b>resources</b></div><div class="pane-list" id="resList">' + folder('[cfx-default]', '', 'dim') + folder('[qb]', '', 'dim') + folder('[standalone]', '', 'dim') + folder(OWN_PACK, 'your clothing pack', 'dim') + '</div><div class="note">Only <code>cr-clothes</code> goes on the server. The bot is optional and the docs are for you.</div>', 'full')
+                    + '</div>';
+                await sleep(700, id);
+                const from = sceneEl.querySelector('.frow.sel'), list = $('#resList');
+                await moveTo(from, id, { fx: 0.25 });
+                await click(id);
+                const fl = fly(from, list.lastElementChild, 'cr-clothes', id, { ms: 900, fromFx: 0.25, toFx: 0.3, toFy: 1.6 });
+                fl.catch(() => {});      // if the run is cancelled, moveTo below reports it; this one must not go unhandled
+                await moveTo(list.lastElementChild, id, { ms: 900, fx: 0.3, fy: 1.6 });
+                await fl;
+                list.insertAdjacentHTML('beforeend', folder('cr-clothes', '', 'new'));
+            }
+        },
+        {
+            id: 'server-cfg',
+            hold: 8000,
+            async play(id) {
+                sceneEl.innerHTML = '<div class="row2" style="grid-template-columns: 1.55fr 1fr">'
+                    + win('server.cfg', '<div class="code"><span class="c"># ... your existing lines ...</span>\n\n<span id="cfg"></span></div>', 'full')
+                    + win('Where these come from', '<div class="tips">'
+                        + '<div class="tip" id="tip1"><h4>The three lines every server needs</h4>Starts the resource and lets everyone in <code>group.admin</code> export designs and hand out design rights. Be in that group yourself, and put the lines below your framework and oxmysql.</div>'
+                        + '<div class="tip" id="tip2"><h4>Webhook URL</h4>In Discord: Edit Channel › Integrations › Webhooks › New Webhook › Copy Webhook URL.</div>'
+                        + '<div class="tip" id="tip3"><h4>Public URL</h4>Your server’s public IP and game port. Not <code>127.0.0.1</code>: that link would only work on the server itself.</div>'
+                        + '</div>', 'full')
+                    + '</div>';
+                const cfg = $('#cfg');
+                const line = async (html, plain) => {
+                    const span = document.createElement('span');
+                    cfg.appendChild(span);
+                    await type(span, plain, id, 14);
+                    span.innerHTML = html;
+                    cfg.appendChild(document.createTextNode('\n'));
+                };
+                await sleep(400, id);
+                $('#tip1').classList.add('on');
+                await line('<span class="k">ensure</span> cr-clothes', 'ensure cr-clothes');
+                await line('<span class="k">add_ace</span> group.admin command.clothbuilder allow', 'add_ace group.admin command.clothbuilder allow');
+                await line('<span class="k">add_ace</span> group.admin crclothes.admin allow', 'add_ace group.admin crclothes.admin allow');
+                cfg.appendChild(document.createTextNode('\n'));
+                await sleep(300, id);
+                $('#tip1').classList.remove('on'); $('#tip2').classList.add('on');
+                await line('<span class="k">set</span> clothdesigner_webhook_url <span class="s">"https://discord.com/api/webhooks/..."</span>', 'set clothdesigner_webhook_url "https://discord.com/api/webhooks/..."');
+                await sleep(300, id);
+                $('#tip2').classList.remove('on'); $('#tip3').classList.add('on');
+                await line('<span class="k">set</span> clothdesigner_public_url  <span class="s">"http://YOUR.SERVER.IP:PORT"</span>', 'set clothdesigner_public_url  "http://YOUR.SERVER.IP:PORT"');
+                await sleep(500, id);
+                $('#tip1').classList.add('on'); $('#tip2').classList.add('on');
+            }
+        },
+        {
+            id: 'start',
+            hold: 6000,
+            async play(id) {
+                sceneEl.innerHTML = win('Server console', '<div class="term" id="term"></div>');
+                const term = $('#term');
+                const out = (html) => term.insertAdjacentHTML('beforeend', html + '\n');
+                const cmd = async (text) => {
+                    const prompt = document.createElement('span'); prompt.className = 'p'; prompt.textContent = '> ';
+                    const span = document.createElement('span'); span.className = 'cmd';
+                    term.append(prompt, span);
+                    await type(span, text, id, 45);
+                    term.appendChild(document.createTextNode('\n'));
+                };
+                await sleep(400, id);
+                out(CORE + dim('Creating script environments for cr-clothes'));
+                out(RESOURCES + dim('Started resource cr-clothes'));
+                await sleep(700, id);
+                out(SCRIPT + esc(READY(0, 0)).replace('v1.1.0 ready', '<span class="hi">v1.1.0 ready</span>').replace('delivery: Discord webhook', '<span class="hi">delivery: Discord webhook</span>'));
+                await sleep(500, id);
+                // The product prints the full path of its garments folder here, as an ordinary line (not a warning).
+                out(SCRIPT + '[cr-clothes] no garments yet: drop clothing packs into /home/fivem/server/resources/cr-clothes/garments and run crclothes_prepare.');
+                await sleep(1100, id);
+                out('');
+                await cmd('clothwebhook_test');
+                await sleep(500, id);
+                out(SCRIPT + '[cr-clothes] pack delivered to Discord webhook (webhook_test_3d279d0663588dfa.txt).');
+                out(SCRIPT + '[cr-clothes] webhook test posted. Open the link in Discord to confirm the download works: <span class="hi nw">http://YOUR.SERVER.IP:PORT/cr-clothes/out/webhook_test_3d279d0663588dfa.txt</span>');
+            }
+        },
+        {
+            id: 'add-clothing',
+            hold: 6000,
+            async play(id) {
+                sceneEl.innerHTML = '<div class="row2" style="grid-template-columns: 0.72fr 1.68fr">'
+                    + win('garments', '<div class="pane-title">resources › cr-clothes › <b>garments</b></div><div class="pane-list" id="garList">' + file('README.md', '', 'dim') + '</div>'
+                        + '<div class="note">Hosted server? <code>crclothes_prepare</code> makes a zip instead. <code>clothbake_get</code> prints its link; upload its <code>generated</code> folder into <code>cr-clothes</code>.</div>', 'full')
+                    + win('Server console', '<div class="term sm" id="term"></div>', 'full') + '</div>';
+                const term = $('#term'), list = $('#garList');
+                const P = SCRIPT + '<span class="p">[crclothes_prepare]</span> ';
+                const out = (html) => term.insertAdjacentHTML('beforeend', html + '\n');
+                const cmd = async (text) => {
+                    const prompt = document.createElement('span'); prompt.className = 'p'; prompt.textContent = '> ';
+                    const span = document.createElement('span'); span.className = 'cmd';
+                    term.append(prompt, span);
+                    await type(span, text, id, 45);
+                    term.appendChild(document.createTextNode('\n'));
+                };
+                await sleep(600, id);
+                list.insertAdjacentHTML('beforeend', folder(OWN_PACK, 'a copy of your pack', 'new'));
+                await sleep(1100, id);
+                await cmd('crclothes_prepare');
+                await sleep(400, id);
+                out(P + 'scanned 6 file(s): 1 garment(s) found, 0 skipped, 0 unrecognised.');
+                await sleep(250, id);
+                out(P + '  + female/tops drawable 0 -- 3 texture slot(s) -- "' + GARMENT + '"');
+                out(P + '      <span class="hi">3D preview: 1811 vertices, 2434 triangles</span>');
+                await sleep(250, id);
+                out(P + 'written into the resource: 1 garment(s) added, 0 refreshed, 1 3D preview(s).');
+                out(P + 'to load them, run:  refresh   then   restart cr-clothes');
+                out(P);
+                out(P + 'REMINDER: the clothing pack itself must still be running (ensure &lt;that pack&gt;),');
+                out(P + 'so the game can load the garment players are designing on.');
+                await sleep(1200, id);
+                await cmd('refresh');
+                await sleep(300, id);
+                // FXServer's own answer to refresh. The counts are this example server's; yours will differ.
+                out(RESOURCES + dim('Scanning resources.'));
+                out(RESOURCES + dim('Found 0 new resources, and refreshed 0/98 resources.'));
+                await sleep(500, id);
+                await cmd('restart cr-clothes');
+                await sleep(300, id);
+                out(RESOURCES + dim('Stopping resource cr-clothes'));
+                out(CORE + dim('Creating script environments for cr-clothes'));
+                out(RESOURCES + dim('Started resource cr-clothes'));
+                await sleep(500, id);
+                out(SCRIPT + esc(READY(1, 1)).replace('garments: 1 (1 exportable)', '<span class="hi">garments: 1 (1 exportable)</span>'));
+            }
+        },
+        {
+            id: 'design',
+            hold: 6000,
+            wide: true,
+            async play(id) {
+                sceneEl.innerHTML = '<div class="game"><div class="chatbox"><span id="chatText"></span></div><div class="designer-fit" id="fit"></div></div>';
+                await sleep(400, id);
+                await type($('#chatText'), '/clothdesigner', id, 60);
+                await sleep(500, id);
+                const fitEl = $('#fit');
+                const ui = mountDesigner(fitEl);
+                sceneEl.querySelector('.chatbox').style.opacity = '0';
+                // The command opens the Garment Browser first; a double-click on a garment opens the editor.
+                if (ui.hasBrowser) {
+                    ui.view('browser');
+                    fitEl.classList.add('show');
+                    await sleep(1800, id);
+                    const card = ui.q('#browserGrid .prepared-garment-card');
+                    await moveTo(card, id, { ms: 800 });
+                    await click(id, 180);
+                    await click(id);
+                    ui.view('editor');
+                }
+                fitEl.classList.add('show');
+                await sleep(2600, id);
+                const button = ui.q('#exportButton');
+                if (button) {
+                    await moveTo(button, id, { ms: 900, fx: 0.86, fy: 0.74 });      // off centre: the button's text changes and has to stay readable
+                    await click(id);
+                    // The stages web/designer.js goes through: the 1024 x 1024 texture leaves in 342 chunks, then the server bakes.
+                    button.disabled = true;
+                    button.textContent = 'Preparing…';
+                    ui.set('#status', 'Preparing current canvas for ' + EXPORT_NAME + ' in 342 local chunks…');
+                    await sleep(450, id);
+                    for (const sent of [1, 121, 241, 342]) {
+                        ui.set('#status', 'Packing baked texture ' + sent + '/342 for ' + GARMENT + '…');
+                        await sleep(130, id);
+                    }
+                    button.textContent = 'Baking…';
+                    ui.set('#status', 'Sending your design to the server…');
+                    await sleep(900, id);
+                    button.disabled = false;
+                    button.textContent = 'Export clothing pack';
+                }
+                ui.set('#status', EXPORT_MESSAGE);
+            }
+        },
+        {
+            id: 'discord',
+            hold: 7000,
+            async play(id) {
+                sceneEl.innerHTML = win('# clothing-packs', '<div class="chat"><div class="avatar"></div><div>'
+                    + '<div class="who">cr-clothes <span class="app">APP</span><time>Today at 11:52 AM</time></div>'
+                    + '<div class="embed"><h3>' + esc(EXPORT_NAME) + '</h3><span class="lnk" id="lnk">Download the pack</span>'
+                    + '<dl><div class="wide"><dt>Install</dt><dd>Unzip into <code>resources/</code>, add <code>ensure ' + PACK + '</code> to server.cfg, restart.</dd></div>'
+                    + '<div><dt>Size</dt><dd>0.22 MB</dd></div><div><dt>Mode</dt><dd>addon</dd></div>'
+                    + '<div class="wide"><dt>Collection</dt><dd><code>' + DLC + '</code>. Each installed pack uses one clothing collection slot, and a server only has a few.</dd></div></dl>'
+                    + '<img class="shot" alt="" src="' + TUT.preview + '">'
+                    + '<footer>Baked on your server; nothing was uploaded. Download it before the server restarts. • Today at 11:52 AM</footer></div>'
+                    + '</div></div><div class="dl top" id="dl"><span class="ico zip"></span>' + PACK + '_8c1f0a6b2d4e9713.zip <small>Completed · 228 KB</small></div>');
+                await sleep(1600, id);
+                const link = $('#lnk');
+                await moveTo(link, id, { fx: 0.4 });
+                link.classList.add('hot');
+                await click(id);
+                $('#dl').classList.add('show');
+            }
+        },
+        {
+            id: 'install-pack',
+            hold: 5500,
+            async play(id) {
+                sceneEl.innerHTML = '<div class="row2">'
+                    + win('Your server', '<div class="pane-title">server › <b>resources</b></div><div class="pane-list" id="resList">' + folder('[cfx-default]', '', 'dim') + folder('[qb]', '', 'dim') + folder('[standalone]', '', 'dim') + folder(OWN_PACK, '', 'dim') + folder('cr-clothes', '', 'dim') + '</div>', 'full')
+                    + win('server.cfg', '<div class="code"><span class="c"># ... your existing lines ...</span>\n<span class="k">ensure</span> ' + OWN_PACK + '\n<span class="k">ensure</span> cr-clothes\n\n<span id="cfg"></span></div><div class="note">New-item packs are new in 1.1.0 and not yet tested in the game: try one on a test server first. Each installed pack uses one of a few clothing collection slots, so install a few designs, not dozens.</div>', 'full')
+                    + '</div>';
+                await sleep(700, id);
+                $('#resList').insertAdjacentHTML('beforeend', folder(PACK, 'the folder inside the zip', 'new'));
+                await sleep(1000, id);
+                const span = document.createElement('span');
+                $('#cfg').appendChild(span);
+                await type(span, 'ensure ' + PACK, id, 16);
+                span.innerHTML = '<span class="k">ensure</span> ' + PACK;
+            }
+        },
+        {
+            id: 'wear-it',
+            hold: 8000,
+            async play() {
+                sceneEl.innerHTML = '<div class="end"><img class="worn" alt="" src="' + TUT.preview + '"><div><h1>That’s the whole install.</h1>'
+                    + '<p>Free and open source under the MIT licence. The full guide covers permissions, hosted servers, known limits and selling design rights on your own store.</p>'
+                    + '<div class="url">github.com/cody-raves/cr-clothes</div></div></div>';
+            }
+        }
+    ];
+
+    // ------------------------------------------------------------ player
+    const rail = $('#rail'), dots = $('#dots'), capTitle = $('#capTitle'), capSub = $('#capSub');
+    const btnPlay = $('#btnPlay'), btnFull = $('#btnFullscreen');
+    const nowCount = $('#nowCount'), nowTitle = $('#nowTitle'), nowText = $('#nowText'), nowLines = $('#nowLines'), nowNote = $('#nowNote'), statusEl = $('#status');
+    let stepLinks = [];         // the list under the player, once its headings are links (at the end of the set-up)
+    let touched = false;        // the visitor has used the player: from then on the address and the screen reader follow every screen
+
+    // The captions are not written in this file. The build puts them into
+    // TUT.steps from site/walkthrough/steps.js, the same data it writes the
+    // list under the player from. The page counts its ten screens 1 to 10,
+    // like the counter on the stage; the stage numbers the nine steps after
+    // the title screen 1 to 9 in its captions, and the list does the same.
+    if (TUT.steps.length !== scenes.length) throw new Error('walkthrough: ' + TUT.steps.length + ' captions for ' + scenes.length + ' scenes');
+    scenes.forEach((scene, index) => {
+        const step = TUT.steps[index];
+        if (step.id !== scene.id) throw new Error('walkthrough: caption "' + step.id + '" does not belong to scene "' + scene.id + '"');
+        scene.title = step.title;
+        scene.sub = step.text;
+        scene.lines = step.lines ? step.lines.join('\n') : '';
+        scene.note = step.note || '';
+        rail.appendChild(document.createElement('i'));
+        const dot = document.createElement('button');
+        dot.type = 'button';
+        dot.textContent = String(index + 1);
+        dot.setAttribute('aria-label', 'Go to screen ' + (index + 1) + ': ' + scene.title);
+        dot.addEventListener('click', () => go(index));
+        dots.appendChild(dot);
+    });
+    const counter = document.createElement('span');
+    rail.appendChild(counter);
+
+    // In a frame there is no list under the player: the stage's name does not
+    // point to one, and the line for screen readers carries the whole screen.
+    if (embedded) wrap.setAttribute('aria-label', 'Animation of the walkthrough.');
+    const plain = markup => { const el = document.createElement('div'); el.innerHTML = markup; return el.textContent; };
+    const inWords = scene => [scene.title + '.', plain(scene.sub), scene.lines, plain(scene.note)].filter(Boolean).join(' ');
+
+    const mark = (el, on) => { if (on) el.setAttribute('aria-current', 'step'); else el.removeAttribute('aria-current'); };
+    function paint(index) {
+        [...rail.querySelectorAll('i')].forEach((el, i) => { el.className = i < index ? 'done' : i === index ? 'now' : ''; });
+        [...dots.children].forEach((el, i) => { el.classList.toggle('now', i === index); mark(el, i === index); });
+        counter.textContent = (index + 1) + ' / ' + scenes.length;
+        const scene = scenes[index];
+        capTitle.innerHTML = (index ? '<b>' + index + '</b>' : '') + esc(scene.title);
+        capSub.innerHTML = scene.sub;
+        btnPlay.textContent = playing ? 'Pause' : 'Play';
+
+        // The page around the stage: the same screen in words, the list, and a line for screen readers.
+        const place = 'Screen ' + (index + 1) + ' of ' + scenes.length;
+        nowCount.textContent = place;
+        nowTitle.textContent = scene.title;
+        nowText.innerHTML = scene.sub;
+        nowLines.firstElementChild.textContent = scene.lines;
+        nowLines.hidden = !scene.lines;
+        nowNote.innerHTML = scene.note;
+        nowNote.hidden = !scene.note;
+        stepLinks.forEach((link, i) => { mark(link, i === index); link.closest('li').classList.toggle('is-current', i === index); });
+        // Said once per screen, and only once the visitor has used the player: a
+        // walkthrough that plays by itself does not talk over someone reading the page.
+        // (In a frame the line is also filled for the first screen, where it is read, not announced.)
+        const first = embedded && !statusEl.hasAttribute('data-step');
+        if ((touched || first) && statusEl.getAttribute('data-step') !== String(index)) {
+            statusEl.setAttribute('data-step', String(index));
+            statusEl.textContent = embedded ? place + ': ' + inWords(scene) : place + ': ' + scene.title;
+        }
+    }
+
+    // The address names the current screen: #step-1 to #step-10, the numbers
+    // on the dots. It is written with replaceState, so Back leaves the page
+    // instead of walking back through the screens. A walkthrough nobody has
+    // touched, still on its first screen, leaves the address alone, and one
+    // that has played to its end gives the address back (see show).
+    function stepInAddress() {
+        const match = /^#step-([1-9]\d?)$/.exec(location.hash);
+        const number = match ? Number(match[1]) : 0;
+        return number >= 1 && number <= scenes.length ? number - 1 : null;
+    }
+    function writeAddress(address) {
+        try { history.replaceState(history.state, '', address); } catch (error) { /* a frame that may not touch its address: it stays as it was */ }
+    }
+    function syncAddress() {
+        if (!touched && current === 0) return;
+        const hash = '#step-' + (current + 1);
+        if (location.hash !== hash) writeAddress(hash);
+    }
+
+    async function show(index, finished) {
+        current = Math.max(0, Math.min(scenes.length - 1, index));
+        const id = ++runId;
+        instant = Boolean(finished);
+        if (!booted) { booted = true; html.setAttribute('data-player', 'ready'); }
+        parkCursor();
+        stage.querySelectorAll('.fly').forEach(el => el.remove());    // a chip still in flight belongs to the scene just left
+        paint(current);
+        syncAddress();
+        const scene = scenes[current];
+        sceneEl.style.padding = scene.wide ? '8px 12px' : '';
+        try {
+            await scene.play(id);
+            if (instant) parkCursor();
+            if (!playing) return;
+            await sleep(scene.hold || 2000, id);
+            cursor.classList.remove('show');
+            if (current < scenes.length - 1) show(current + 1, false);
+            else {
+                // Played to the end. The address goes back to the page itself: reloaded
+                // or passed on, it starts the walkthrough instead of opening its last screen.
+                playing = false;
+                paint(current);
+                if (location.hash) writeAddress(location.pathname + location.search);
+            }
+        } catch (error) {
+            if (!(error instanceof Cancelled)) throw error;
+        }
+    }
+
+    // What the buttons, the keys, the list and the address do. A screen that
+    // is picked is shown paused, in its finished state.
+    function go(index) { touched = true; playing = false; show(index, true); }
+    function togglePlay() {
+        touched = true;
+        playing = !playing;
+        if (playing) show(current === scenes.length - 1 ? 0 : current, false);
+        else { runId++; show(current, true); }
+    }
+    function restart() { touched = true; playing = true; show(0, false); }
+    // The recording view and its two keys are for recording the GIF and exist
+    // only when the address asks for them (?record=1; see site/README.md), so
+    // no letter typed on the page ever does anything.
+    const recordingKeys = query.get('record') === '1';
+    function setRecording(on) { document.body.classList.toggle('recording', on); requestAnimationFrame(fit); }
+
+    btnPlay.addEventListener('click', togglePlay);
+    $('#btnNext').addEventListener('click', () => go(current + 1));
+    $('#btnPrev').addEventListener('click', () => go(current - 1));
+    $('#btnRestart').addEventListener('click', restart);
+    document.addEventListener('keydown', event => {
+        const target = event.target;
+        if (target && target.closest && target.closest('input, textarea, select, pre')) return;     // in a block of lines the arrow keys scroll it
+        if (event.ctrlKey || event.altKey || event.metaKey) return;      // Ctrl+R, Win+Alt+R (Game Bar record) and friends are not ours
+        if (event.key === ' ') {
+            // A button reached with the keyboard keeps its own Space; anywhere
+            // else on the page Space is play and pause, also on a button
+            // that only has the focus because it was just clicked.
+            const button = target && target.closest ? target.closest('button') : null;
+            if (button && button !== clicked) return;
+            event.preventDefault();
+            spaceTaken = true;
+            if (!event.repeat) togglePlay();
+        }
+        else if (event.key === 'ArrowRight') go(current + 1);
+        else if (event.key === 'ArrowLeft') go(current - 1);
+        else if (!recordingKeys) return;
+        else if (event.key === 'h' || event.key === 'H') setRecording(!document.body.classList.contains('recording'));
+        else if (event.key === 'r' || event.key === 'R') restart();
+        else if (event.key === 'Escape') setRecording(false);
+    });
+    // The button that has the focus because it was clicked or tapped, if any:
+    // set when a button is pressed, dropped as soon as the focus goes elsewhere.
+    let clicked = null;
+    document.addEventListener('pointerdown', event => { clicked = event.target && event.target.closest ? event.target.closest('button') : null; }, true);
+    document.addEventListener('focusin', event => { if (event.target !== clicked) clicked = null; });
+    // Some browsers press a focused button when Space is released, whatever
+    // happened when it went down. A Space that was play and pause (above) must
+    // not press the button as well.
+    let spaceTaken = false;
+    document.addEventListener('keyup', event => {
+        if (event.key !== ' ' || !spaceTaken) return;
+        spaceTaken = false;
+        event.preventDefault();
+    });
+
+    // The headings of the list become real links (#step-N) at the end of the
+    // set-up. An ordinary click shows the screen in the player; a click that
+    // opens a new tab or window gets the link. The focus goes along to the
+    // Play button, so it is where the page has just changed and not on a
+    // link that scrolled out of sight.
+    $('#stepList').addEventListener('click', event => {
+        const link = event.target && event.target.closest ? event.target.closest('a[data-step]') : null;
+        if (!link || event.button || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+        event.preventDefault();
+        go(Number(link.getAttribute('data-step')) - 1);
+        btnPlay.focus({ preventScroll: true });
+        player.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest' });
+    });
+    window.addEventListener('hashchange', () => {
+        const step = stepInAddress();
+        if (step !== null && step !== current) go(step);
+    });
+
+    // Full screen, for the stage only and only where the browser offers it.
+    const requestFull = wrap.requestFullscreen || wrap.webkitRequestFullscreen;
+    const exitFull = document.exitFullscreen || document.webkitExitFullscreen;
+    if (requestFull && exitFull && (document.fullscreenEnabled || document.webkitFullscreenEnabled)) {
+        btnFull.hidden = false;
+        btnFull.addEventListener('click', () => {
+            if (fullscreenElement()) { exitFull.call(document); return; }
+            const asked = requestFull.call(wrap);
+            if (asked && asked.catch) asked.catch(() => {});       // refused, for example by the page this one is embedded in
+        });
+        const changed = () => {
+            fit();
+            // A full screen has no buttons. Space and the arrow keys work there,
+            // and a click or tap on the stage is play and pause. Leaving it,
+            // the focus returns to the button that opened it, also when a Tab
+            // press in the full screen had taken it off the stage.
+            const focus = document.activeElement;
+            if (fullscreenElement() === wrap) wrap.focus({ preventScroll: true });
+            else if (!focus || focus === wrap || focus === document.body) btnFull.focus({ preventScroll: true });
+        };
+        document.addEventListener('fullscreenchange', changed);
+        document.addEventListener('webkitfullscreenchange', changed);
+        wrap.addEventListener('click', () => { if (fullscreenElement() === wrap) togglePlay(); });
+    }
+
+    // ------------------------------------------------------------ start
+    // The pictures of the later screens are fetched now, so each is there when its screen comes up.
+    const pictures = ['preview', 'texture', 'uvGuide', 'browserMain', 'browserThumb'].filter(name => TUT[name]).map(name => { const img = new Image(); img.src = TUT[name]; return img; });
+
+    // Every font weight the scenes use is fetched before the first screen is
+    // drawn, so that screen does not re-flow and no text swaps font the first
+    // time it appears. The wait has a limit: with the font host slow, blocked
+    // or offline the walkthrough starts in the fallback fonts.
+    function fontsSettled(limit) {
+        const sheet = $('#fontSheet');
+        const sheetIn = new Promise(resolve => {
+            if (!sheet || sheet.sheet || sheet.hasAttribute('data-done')) { resolve(); return; }
+            sheet.addEventListener('load', resolve);
+            sheet.addEventListener('error', resolve);
+        });
+        const faces = sheetIn.then(() => {
+            if (!document.fonts || !document.fonts.load) return null;
+            void document.body.offsetWidth;          // from here on the style sheet's @font-face rules are known
+            const wanted = [];
+            ['400', '500', '700'].forEach(w => wanted.push(w + ' 14px "JetBrains Mono"'));
+            ['400', '500', '600', '700', '800'].forEach(w => wanted.push(w + ' 14px Inter'));
+            return Promise.all(wanted.map(font => document.fonts.load(font).catch(() => {})));
+        });
+        const timeout = new Promise(resolve => setTimeout(resolve, limit));
+        return Promise.race([faces, timeout]).catch(() => {});
+    }
+
+    // It plays by itself when the page opens, except: when the address names a
+    // step (that step is shown, paused), with ?autoplay=0, when the visitor
+    // prefers reduced motion, and in an embed (?embed=1) that does not ask for
+    // it with ?autoplay=1.
+    const linked = stepInAddress();
+    const autoplay = linked === null && !reduced && query.get('autoplay') !== '0' && (!embedded || query.get('autoplay') === '1');
+
+    // The player is set up. Only now do the headings of the list under it
+    // become links to their screens: as the page is written they are plain
+    // text, so without the player there is no link that leads nowhere.
+    const headings = [...document.querySelectorAll('#stepList h3')];
+    if (headings.length !== scenes.length) throw new Error('walkthrough: ' + headings.length + ' entries in the list for ' + scenes.length + ' scenes');
+    stepLinks = headings.map((heading, index) => {
+        const link = document.createElement('a');
+        link.href = '#step-' + (index + 1);
+        link.setAttribute('data-step', String(index + 1));
+        link.append(...heading.childNodes);
+        heading.appendChild(link);
+        return link;
+    });
+
+    fontsSettled(1500).then(() => {
+        fit();                                       // the buttons have their final width now
+        if (booted) return;                          // the visitor was quicker than the fonts
+        if (linked !== null) { show(linked, true); return; }
+        if (!autoplay) { show(0, true); return; }
+        if (!document.hidden) { playing = true; show(0, false); return; }
+        // Opened in a background tab: wait on the first screen until someone looks.
+        show(0, true);
+        document.addEventListener('visibilitychange', function onVisible() {
+            if (document.hidden) return;
+            document.removeEventListener('visibilitychange', onVisible);
+            if (!touched && !playing) { playing = true; show(0, false); }
+        });
+    });
+}
+</script>
+</body>
+</html>
